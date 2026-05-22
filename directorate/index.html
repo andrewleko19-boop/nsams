@@ -1,0 +1,228 @@
+<!-- directorate/index.html -->
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NSAMS – Directorate Dashboard</title>
+
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="stylesheet" href="style.css" />
+
+  <!-- SVG Sprite -->
+  <svg xmlns="http://www.w3.org/2000/svg" style="display:none">
+    <symbol id="icon-school" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>
+    </symbol>
+    <symbol id="icon-users" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/>
+    </symbol>
+    <symbol id="icon-alert" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+    </symbol>
+    <symbol id="icon-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <polyline points="20 6 9 17 4 12"/>
+    </symbol>
+    <symbol id="icon-logout" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/>
+    </symbol>
+    <symbol id="icon-refresh" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/>
+      <path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/>
+    </symbol>
+    <symbol id="icon-map" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/>
+    </symbol>
+    <symbol id="icon-eye" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
+    </symbol>
+    <symbol id="icon-clock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+    </symbol>
+  </svg>
+</head>
+<body>
+
+  <!-- ═══════════════ LOGIN SCREEN ═══════════════ -->
+  <div id="login-screen" class="login-overlay">
+    <div class="login-card">
+      <div class="login-logo">
+        <svg class="icon icon-xl"><use href="#icon-school"/></svg>
+        <h1>NSAMS</h1>
+        <p>National School Attendance Monitoring System</p>
+        <span class="login-role-badge">Directorate Portal</span>
+      </div>
+      <div class="form-group">
+        <label for="login-email">Email</label>
+        <input type="email" id="login-email" placeholder="directorate@edu.sy" autocomplete="username" />
+      </div>
+      <div class="form-group">
+        <label for="login-password">Password</label>
+        <input type="password" id="login-password" placeholder="••••••••" autocomplete="current-password" />
+      </div>
+      <button id="login-btn" class="btn btn-primary btn-full">
+        Sign In
+      </button>
+      <p id="login-error" class="login-error hidden"></p>
+    </div>
+  </div>
+
+  <!-- ═══════════════ MAIN APP ═══════════════ -->
+  <div id="app" class="hidden">
+
+    <!-- Top Nav -->
+    <header class="topnav">
+      <div class="topnav-brand">
+        <svg class="icon"><use href="#icon-school"/></svg>
+        <span>NSAMS <em>Directorate</em></span>
+      </div>
+      <div class="topnav-meta">
+        <span id="nav-date" class="nav-date"></span>
+        <span id="refresh-countdown" class="refresh-badge">
+          <svg class="icon icon-sm"><use href="#icon-clock"/></svg>
+          <span id="countdown-val">30</span>s
+        </span>
+        <button id="manual-refresh-btn" class="btn btn-ghost btn-sm" title="Refresh now">
+          <svg class="icon icon-sm"><use href="#icon-refresh"/></svg>
+          Refresh
+        </button>
+        <span id="nav-user" class="nav-user"></span>
+        <button id="logout-btn" class="btn btn-ghost btn-sm">
+          <svg class="icon icon-sm"><use href="#icon-logout"/></svg>
+          Logout
+        </button>
+      </div>
+    </header>
+
+    <main class="main-content">
+
+      <!-- Stats Row -->
+      <section class="stats-row" id="stats-row">
+        <div class="stat-card" id="stat-teachers">
+          <div class="stat-icon stat-icon--blue">
+            <svg class="icon"><use href="#icon-users"/></svg>
+          </div>
+          <div class="stat-body">
+            <span class="stat-label">Teachers Present</span>
+            <span class="stat-value" id="stat-teachers-val">—</span>
+            <span class="stat-sub" id="stat-teachers-sub"></span>
+          </div>
+        </div>
+        <div class="stat-card" id="stat-students">
+          <div class="stat-icon stat-icon--green">
+            <svg class="icon"><use href="#icon-users"/></svg>
+          </div>
+          <div class="stat-body">
+            <span class="stat-label">Students Present</span>
+            <span class="stat-value" id="stat-students-val">—</span>
+            <span class="stat-sub" id="stat-students-sub"></span>
+          </div>
+        </div>
+        <div class="stat-card" id="stat-reports">
+          <div class="stat-icon stat-icon--amber">
+            <svg class="icon"><use href="#icon-alert"/></svg>
+          </div>
+          <div class="stat-body">
+            <span class="stat-label">Active Reports</span>
+            <span class="stat-value" id="stat-reports-val">—</span>
+            <span class="stat-sub" id="stat-reports-sub"></span>
+          </div>
+        </div>
+        <div class="stat-card" id="stat-schools">
+          <div class="stat-icon stat-icon--purple">
+            <svg class="icon"><use href="#icon-school"/></svg>
+          </div>
+          <div class="stat-body">
+            <span class="stat-label">Schools Reporting</span>
+            <span class="stat-value" id="stat-schools-val">—</span>
+            <span class="stat-sub" id="stat-schools-sub"></span>
+          </div>
+        </div>
+      </section>
+
+      <!-- Two-column layout: Map + Pending Reports -->
+      <div class="two-col">
+
+        <!-- Map Panel -->
+        <section class="panel map-panel">
+          <div class="panel-header">
+            <h2>
+              <svg class="icon"><use href="#icon-map"/></svg>
+              School Map
+            </h2>
+            <div class="map-legend">
+              <span class="legend-dot legend-dot--green"></span>Normal
+              <span class="legend-dot legend-dot--amber"></span>Low Attendance
+              <span class="legend-dot legend-dot--red"></span>Critical / No Data
+            </div>
+          </div>
+          <div id="map"></div>
+        </section>
+
+        <!-- Pending Reports Panel -->
+        <section class="panel pending-panel">
+          <div class="panel-header">
+            <h2>
+              <svg class="icon"><use href="#icon-alert"/></svg>
+              Pending Reports
+            </h2>
+            <span id="pending-count" class="badge badge--amber">0</span>
+          </div>
+          <div id="pending-list" class="pending-list">
+            <p class="empty-state">No pending reports.</p>
+          </div>
+        </section>
+
+      </div>
+
+      <!-- Full Reports Table -->
+      <section class="panel">
+        <div class="panel-header">
+          <h2>
+            <svg class="icon"><use href="#icon-eye"/></svg>
+            All Reports
+          </h2>
+          <div class="table-filters">
+            <select id="filter-status" class="select-sm">
+              <option value="">All Statuses</option>
+              <option value="pending">Pending</option>
+              <option value="reviewed">Reviewed</option>
+              <option value="resolved">Resolved</option>
+            </select>
+            <select id="filter-type" class="select-sm">
+              <option value="">All Types</option>
+              <option value="low_attendance">Low Attendance</option>
+              <option value="absent_teacher">Absent Teacher</option>
+              <option value="other">Other</option>
+            </select>
+          </div>
+        </div>
+        <div class="table-wrapper">
+          <table id="reports-table" class="data-table">
+            <thead>
+              <tr>
+                <th>School</th>
+                <th>Type</th>
+                <th>Description</th>
+                <th>Submitted</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="reports-tbody">
+              <tr><td colspan="6" class="empty-state">Loading reports…</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- Toast Container -->
+  <div id="toast-container" class="toast-container"></div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script type="module" src="script.js"></script>
+</body>
+</html>

@@ -1,0 +1,430 @@
+<!-- school/index.html -->
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#0B2B5E" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <title>NSAMS – سجل الحضور</title>
+  <link rel="stylesheet" href="./style.css" />
+</head>
+<body>
+
+<!-- ═══ SVG Sprite ═══════════════════════════════════════════════════════════ -->
+<svg xmlns="http://www.w3.org/2000/svg" style="display:none" aria-hidden="true">
+  <symbol id="ic-user" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+    <circle cx="12" cy="7" r="4"/>
+  </symbol>
+  <symbol id="ic-lock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="3" y="11" width="18" height="11" rx="2"/>
+    <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+  </symbol>
+  <symbol id="ic-eye" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+    <circle cx="12" cy="12" r="3"/>
+  </symbol>
+  <symbol id="ic-eye-off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/>
+    <line x1="1" y1="1" x2="23" y2="23"/>
+  </symbol>
+  <symbol id="ic-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <polyline points="20 6 9 17 4 12"/>
+  </symbol>
+  <symbol id="ic-check-circle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+    <polyline points="22 4 12 14.01 9 11.01"/>
+  </symbol>
+  <symbol id="ic-x" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <line x1="18" y1="6" x2="6" y2="18"/>
+    <line x1="6" y1="6" x2="18" y2="18"/>
+  </symbol>
+  <symbol id="ic-x-circle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="12" cy="12" r="10"/>
+    <line x1="15" y1="9" x2="9" y2="15"/>
+    <line x1="9" y1="9" x2="15" y2="15"/>
+  </symbol>
+  <symbol id="ic-plus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <line x1="12" y1="5" x2="12" y2="19"/>
+    <line x1="5" y1="12" x2="19" y2="12"/>
+  </symbol>
+  <symbol id="ic-alert" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+    <line x1="12" y1="9" x2="12" y2="13"/>
+    <line x1="12" y1="17" x2="12.01" y2="17"/>
+  </symbol>
+  <symbol id="ic-alert-circle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="12" cy="12" r="10"/>
+    <line x1="12" y1="8" x2="12" y2="12"/>
+    <line x1="12" y1="16" x2="12.01" y2="16"/>
+  </symbol>
+  <symbol id="ic-wifi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M5 12.55a11 11 0 0 1 14.08 0"/>
+    <path d="M1.42 9a16 16 0 0 1 21.16 0"/>
+    <path d="M8.53 16.11a6 6 0 0 1 6.95 0"/>
+    <line x1="12" y1="20" x2="12.01" y2="20"/>
+  </symbol>
+  <symbol id="ic-wifi-off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <line x1="1" y1="1" x2="23" y2="23"/>
+    <path d="M16.72 11.06A10.94 10.94 0 0 1 19 12.55"/>
+    <path d="M5 12.55a10.94 10.94 0 0 1 5.17-2.39"/>
+    <path d="M10.71 5.05A16 16 0 0 1 22.56 9"/>
+    <path d="M1.42 9a15.91 15.91 0 0 1 4.7-2.88"/>
+    <path d="M8.53 16.11a6 6 0 0 1 6.95 0"/>
+    <line x1="12" y1="20" x2="12.01" y2="20"/>
+  </symbol>
+  <symbol id="ic-refresh" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <polyline points="23 4 23 10 17 10"/>
+    <polyline points="1 20 1 14 7 14"/>
+    <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+  </symbol>
+  <symbol id="ic-camera" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+    <circle cx="12" cy="13" r="4"/>
+  </symbol>
+  <symbol id="ic-send" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <line x1="22" y1="2" x2="11" y2="13"/>
+    <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+  </symbol>
+  <symbol id="ic-logout" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+    <polyline points="16 17 21 12 16 7"/>
+    <line x1="21" y1="12" x2="9" y2="12"/>
+  </symbol>
+  <symbol id="ic-clipboard" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/>
+    <rect x="8" y="2" width="8" height="4" rx="1"/>
+  </symbol>
+  <symbol id="ic-school" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+    <polyline points="9 22 9 12 15 12 15 22"/>
+  </symbol>
+  <symbol id="ic-chevron-down" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <polyline points="6 9 12 15 18 9"/>
+  </symbol>
+  <symbol id="ic-clock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="12" cy="12" r="10"/>
+    <polyline points="12 6 12 12 16 14"/>
+  </symbol>
+  <symbol id="ic-users" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+    <circle cx="9" cy="7" r="4"/>
+    <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+    <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+  </symbol>
+  <symbol id="ic-receipt" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <polyline points="9 11 12 14 22 4"/>
+    <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
+  </symbol>
+</svg>
+
+<!-- ═══ Login Screen ══════════════════════════════════════════════════════════ -->
+<div id="screen-login" class="screen">
+  <div class="login-bg">
+    <div class="login-pattern" aria-hidden="true"></div>
+    <div class="login-card">
+      <div class="login-brand">
+        <div class="login-logo-wrap">
+          <svg class="icon icon-2xl"><use href="#ic-school"/></svg>
+        </div>
+        <h1 class="login-title">NSAMS</h1>
+        <p class="login-subtitle">نظام متابعة الحضور المدرسي الوطني</p>
+        <p class="login-ministry">وزارة التربية – الجمهورية العربية السورية</p>
+      </div>
+
+      <form id="form-login" novalidate autocomplete="off">
+        <div class="field-group">
+          <label for="in-email">البريد الإلكتروني</label>
+          <div class="input-wrap">
+            <svg class="input-icon"><use href="#ic-user"/></svg>
+            <input type="email" id="in-email" placeholder="admin@school.edu.sy"
+                   autocomplete="username" inputmode="email" required />
+          </div>
+        </div>
+        <div class="field-group">
+          <label for="in-password">كلمة المرور</label>
+          <div class="input-wrap">
+            <svg class="input-icon"><use href="#ic-lock"/></svg>
+            <input type="password" id="in-password" placeholder="••••••••"
+                   autocomplete="current-password" required />
+            <button type="button" class="toggle-pw" id="btn-toggle-pw" aria-label="إظهار/إخفاء كلمة المرور">
+              <svg class="icon"><use href="#ic-eye" id="pw-eye-use"/></svg>
+            </button>
+          </div>
+        </div>
+
+        <div id="login-error" class="msg msg-error" hidden></div>
+
+        <button type="submit" class="btn btn-primary btn-full" id="btn-login">
+          <svg class="icon btn-icon-start"><use href="#ic-school"/></svg>
+          <span id="btn-login-label">دخول</span>
+          <span class="spinner" id="login-spinner" hidden></span>
+        </button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ App Screen ════════════════════════════════════════════════════════════ -->
+<div id="screen-app" class="screen" hidden>
+
+  <!-- Header -->
+  <header class="app-header">
+    <div class="header-start">
+      <svg class="icon"><use href="#ic-school"/></svg>
+      <div class="header-meta">
+        <div class="header-school" id="hdr-school">—</div>
+        <div class="header-date"  id="hdr-date">—</div>
+      </div>
+    </div>
+    <div class="header-end">
+      <div class="conn-pill" id="conn-pill">
+        <svg class="icon icon-xs"><use href="#ic-wifi" id="conn-icon"/></svg>
+        <span id="conn-label">متصل</span>
+      </div>
+      <button class="hdr-btn" id="btn-sync" title="مزامنة البيانات" aria-label="مزامنة">
+        <svg class="icon" id="sync-icon"><use href="#ic-refresh"/></svg>
+      </button>
+      <button class="hdr-btn" id="btn-logout" title="تسجيل الخروج" aria-label="تسجيل الخروج">
+        <svg class="icon"><use href="#ic-logout"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- Pending sync bar -->
+  <div id="pending-bar" class="pending-bar" hidden>
+    <svg class="icon icon-xs"><use href="#ic-clock"/></svg>
+    <span id="pending-text">سجلات في انتظار المزامنة</span>
+  </div>
+
+  <main class="page">
+
+    <!-- Status card -->
+    <div id="status-card" class="status-card status-pending">
+      <div class="status-icon-wrap">
+        <svg class="icon icon-lg"><use href="#ic-clock" id="status-icon"/></svg>
+      </div>
+      <div class="status-body">
+        <div class="status-title" id="status-title">لم يُرسل سجل الحضور</div>
+        <div class="status-sub"   id="status-sub">يرجى تعبئة النموذج وإرساله قبل نهاية الدوام</div>
+      </div>
+    </div>
+
+    <!-- ── Attendance card ────────────────────────────────── -->
+    <section class="card" id="att-card">
+      <div class="card-hdr">
+        <svg class="icon"><use href="#ic-clipboard"/></svg>
+        <span>سجل الحضور اليومي</span>
+      </div>
+
+      <div class="card-body">
+
+        <!-- Teacher block -->
+        <div class="block-label">
+          <svg class="icon icon-sm"><use href="#ic-users"/></svg>
+          الهيئة التدريسية
+        </div>
+
+        <div class="counters">
+          <div class="counter counter-green">
+            <span class="counter-num" id="t-present">0</span>
+            <span class="counter-lbl">حاضر</span>
+          </div>
+          <div class="counter counter-red">
+            <span class="counter-num" id="t-absent">0</span>
+            <span class="counter-lbl">غائب</span>
+          </div>
+          <div class="counter counter-blue">
+            <span class="counter-num" id="t-total">0</span>
+            <span class="counter-lbl">الإجمالي</span>
+          </div>
+        </div>
+
+        <!-- Absent teachers -->
+        <div class="subsection">
+          <div class="sub-label">المعلمون الغائبون</div>
+          <ul class="absent-list" id="absent-list"></ul>
+          <div class="add-row">
+            <input type="text" id="in-absent" class="field-input"
+                   placeholder="اسم المعلم الغائب" maxlength="80" />
+            <button type="button" class="btn btn-ghost btn-sm" id="btn-add-absent">
+              <svg class="icon icon-sm"><use href="#ic-plus"/></svg>إضافة
+            </button>
+          </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <!-- Students block -->
+        <div class="block-label">
+          <svg class="icon icon-sm"><use href="#ic-users"/></svg>
+          الطلاب
+        </div>
+
+        <div class="twin-fields">
+          <div class="field-group">
+            <label for="in-stu-present">حاضرون</label>
+            <input type="number" id="in-stu-present" class="field-input"
+                   min="0" max="9999" value="0" inputmode="numeric" />
+          </div>
+          <div class="field-group">
+            <label for="in-stu-absent">غائبون</label>
+            <input type="number" id="in-stu-absent" class="field-input"
+                   min="0" max="9999" value="0" inputmode="numeric" />
+          </div>
+        </div>
+
+        <div class="field-group">
+          <label for="in-notes">ملاحظات <span class="optional">(اختياري)</span></label>
+          <textarea id="in-notes" class="field-input" rows="2"
+                    placeholder="أي ملاحظات إضافية…" maxlength="500"></textarea>
+        </div>
+
+        <button type="button" class="btn btn-primary btn-full" id="btn-submit-att">
+          <svg class="icon icon-sm"><use href="#ic-send"/></svg>
+          إرسال سجل الحضور
+        </button>
+
+      </div><!-- /card-body -->
+    </section>
+
+    <!-- Submitted confirmation (replaces form) -->
+    <div id="att-done" class="done-banner" hidden>
+      <svg class="icon icon-lg"><use href="#ic-check-circle"/></svg>
+      <div>
+        <div class="done-title">تم إرسال سجل الحضور</div>
+        <div class="done-sub"  id="att-done-sub">—</div>
+      </div>
+    </div>
+
+  </main><!-- /page -->
+
+  <!-- FAB: Emergency Report -->
+  <button class="fab" id="btn-open-report" aria-label="فتح نموذج البلاغ الطارئ">
+    <svg class="icon icon-lg"><use href="#ic-alert"/></svg>
+    <span class="fab-label">بلاغ طارئ</span>
+  </button>
+
+</div><!-- /screen-app -->
+
+<!-- ═══ Emergency Report Modal ════════════════════════════════════════════════ -->
+<div id="modal-report" class="overlay" hidden aria-modal="true" role="dialog" aria-label="نموذج البلاغ الطارئ">
+  <div class="sheet" id="report-sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-hdr sheet-hdr-danger">
+      <div class="sheet-title">
+        <svg class="icon"><use href="#ic-alert"/></svg>
+        بلاغ طارئ
+      </div>
+      <button class="icon-btn" id="btn-close-report" aria-label="إغلاق">
+        <svg class="icon"><use href="#ic-x"/></svg>
+      </button>
+    </div>
+
+    <div class="sheet-body">
+
+      <div class="field-group">
+        <label for="r-type">نوع الحالة <span class="req">*</span></label>
+        <div class="select-wrap">
+          <select id="r-type" class="field-input">
+            <option value="">اختر نوع الحالة</option>
+            <option value="security_threat">تهديد أمني</option>
+            <option value="infrastructure_damage">أضرار في البنية التحتية</option>
+            <option value="health_emergency">طارئ صحي</option>
+            <option value="natural_disaster">كارثة طبيعية</option>
+            <option value="teacher_shortage">نقص في الكوادر التدريسية</option>
+            <option value="other">أخرى</option>
+          </select>
+          <svg class="select-arrow icon icon-sm"><use href="#ic-chevron-down"/></svg>
+        </div>
+      </div>
+
+      <div class="field-group">
+        <label for="r-desc">وصف الحالة <span class="req">*</span></label>
+        <textarea id="r-desc" class="field-input" rows="4"
+                  placeholder="صِف الحالة بالتفصيل…" maxlength="1000"></textarea>
+        <div class="field-footer">
+          <span class="char-count" id="r-desc-count">0 / 1000</span>
+        </div>
+      </div>
+
+      <div class="field-group">
+        <label>مستوى الخطورة</label>
+        <div class="severity-wrap">
+          <span class="sev-pole">منخفض</span>
+          <div class="sev-btns" id="sev-btns">
+            <button type="button" class="sev-btn active" data-v="1">1</button>
+            <button type="button" class="sev-btn" data-v="2">2</button>
+            <button type="button" class="sev-btn" data-v="3">3</button>
+            <button type="button" class="sev-btn" data-v="4">4</button>
+            <button type="button" class="sev-btn" data-v="5">5</button>
+          </div>
+          <span class="sev-pole">حرج</span>
+        </div>
+      </div>
+
+      <div class="field-group">
+        <label>صورة <span class="optional">(اختياري)</span></label>
+        <label class="photo-btn" id="photo-label" for="r-photo">
+          <svg class="icon"><use href="#ic-camera"/></svg>
+          <span id="photo-text">إرفاق صورة</span>
+        </label>
+        <input type="file" id="r-photo" accept="image/*" capture="environment" class="sr-only" />
+      </div>
+
+      <div id="r-error" class="msg msg-error" hidden></div>
+
+      <button type="button" class="btn btn-danger btn-full" id="btn-submit-report">
+        <svg class="icon icon-sm"><use href="#ic-send"/></svg>
+        <span id="r-submit-label">إرسال البلاغ</span>
+        <span class="spinner" id="r-spinner" hidden></span>
+      </button>
+
+    </div><!-- /sheet-body -->
+  </div>
+</div>
+
+<!-- ═══ Receipt Modal ════════════════════════════════════════════════════════ -->
+<div id="modal-receipt" class="overlay" hidden aria-modal="true" role="dialog" aria-label="إيصال البلاغ">
+  <div class="sheet sheet-sm">
+    <div class="sheet-handle"></div>
+    <div class="receipt-body">
+      <div class="receipt-icon">
+        <svg class="icon icon-2xl"><use href="#ic-receipt"/></svg>
+      </div>
+      <h2 class="receipt-title">تم استلام البلاغ</h2>
+      <p class="receipt-hint">سيتابع مكتب المديرية الحالة في أقرب وقت</p>
+
+      <div class="receipt-table">
+        <div class="receipt-row">
+          <span>رقم الاستلام</span>
+          <strong id="rec-number">—</strong>
+        </div>
+        <div class="receipt-row">
+          <span>التاريخ والوقت</span>
+          <strong id="rec-time">—</strong>
+        </div>
+        <div class="receipt-row">
+          <span>الحالة</span>
+          <strong id="rec-status">مفتوح</strong>
+        </div>
+      </div>
+
+      <button type="button" class="btn btn-primary btn-full" id="btn-close-receipt">
+        <svg class="icon icon-sm"><use href="#ic-check"/></svg>
+        حسناً
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast zone -->
+<div id="toasts" class="toast-zone" aria-live="polite" aria-atomic="false"></div>
+
+<!-- Load order: Supabase → shared DB → this module -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="../shared/db.js"></script>
+<script type="module" src="./script.js"></script>
+</body>
+</html>
