@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NSAMS — نظام إدارة المدارس الوطني</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;900&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --navy:       #0B2B5E;
+      --navy-mid:   #0f3570;
+      --navy-light: #164299;
+      --accent:     #2F80ED;
+      --accent-glow:#4fa3ff;
+      --gold:       #F0B429;
+      --surface:    #0d1e3a;
+      --surface-2:  #112347;
+      --border:     rgba(47, 128, 237, 0.18);
+      --text:       #e8edf8;
+      --text-muted: #7a93c0;
+      --white:      #ffffff;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'Cairo', sans-serif;
+      background: var(--surface);
+      color: var(--text);
+      min-height: 100vh;
+      overflow-x: hidden;
+      position: relative;
+    }
+
+    /* ── Background mesh ── */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background:
+        radial-gradient(ellipse 80% 60% at 20% 10%,  rgba(15, 53, 112, 0.55) 0%, transparent 60%),
+        radial-gradient(ellipse 60% 50% at 80% 80%,  rgba(11, 43, 94, 0.65)  0%, transparent 55%),
+        radial-gradient(ellipse 40% 40% at 60% 20%,  rgba(47, 128, 237, 0.07) 0%, transparent 50%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* Subtle grid overlay */
+    body::after {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(47, 128, 237, 0.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(47, 128, 237, 0.04) 1px, transparent 1px);
+      background-size: 40px 40px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .wrapper {
+      position: relative;
+      z-index: 1;
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 0 24px;
+    }
+
+    /* ── Header ── */
+    header {
+      padding: 56px 0 40px;
+      text-align: center;
+      position: relative;
+    }
+
+    .logo-mark {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 72px;
+      height: 72px;
+      background: linear-gradient(135deg, var(--navy-light), var(--accent));
+      border-radius: 18px;
+      margin-bottom: 24px;
+      box-shadow: 0 0 0 1px var(--border), 0 8px 32px rgba(47, 128, 237, 0.3);
+      animation: fadeDown 0.6s ease both;
+    }
+
+    .site-title {
+      font-size: clamp(28px, 5vw, 42px);
+      font-weight: 900;
+      letter-spacing: -0.5px;
+      line-height: 1.15;
+      color: var(--white);
+      animation: fadeDown 0.6s 0.1s ease both;
+    }
+
+    .site-title span {
+      color: var(--accent-glow);
+    }
+
+    .site-subtitle {
+      margin-top: 12px;
+      font-size: 15px;
+      color: var(--text-muted);
+      font-weight: 400;
+      max-width: 480px;
+      margin-inline: auto;
+      line-height: 1.7;
+      animation: fadeDown 0.6s 0.2s ease both;
+    }
+
+    /* ── Divider ── */
+    .divider {
+      width: 60px;
+      height: 3px;
+      background: linear-gradient(90deg, var(--accent), var(--gold));
+      border-radius: 2px;
+      margin: 28px auto;
+      animation: fadeDown 0.6s 0.25s ease both;
+    }
+
+    /* ── Cards grid ── */
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 20px;
+      padding: 8px 0 64px;
+    }
+
+    .card {
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 36px 28px 32px;
+      text-decoration: none;
+      color: inherit;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      position: relative;
+      overflow: hidden;
+      transition: transform 0.28s cubic-bezier(.22,.68,0,1.2),
+                  box-shadow 0.28s ease,
+                  border-color 0.28s ease;
+      animation: fadeUp 0.6s ease both;
+    }
+
+    .card:nth-child(1) { animation-delay: 0.3s; }
+    .card:nth-child(2) { animation-delay: 0.42s; }
+    .card:nth-child(3) { animation-delay: 0.54s; }
+
+    /* Top accent bar */
+    .card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+      background: linear-gradient(90deg, var(--accent), var(--accent-glow));
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+
+    .card:hover {
+      transform: translateY(-6px);
+      box-shadow: 0 16px 48px rgba(11, 43, 94, 0.5), 0 0 0 1px rgba(47, 128, 237, 0.3);
+      border-color: rgba(47, 128, 237, 0.4);
+    }
+
+    .card:hover::before { opacity: 1; }
+
+    /* Glow blob on hover */
+    .card::after {
+      content: '';
+      position: absolute;
+      width: 200px;
+      height: 200px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(47, 128, 237, 0.12) 0%, transparent 70%);
+      top: -60px;
+      right: -60px;
+      transition: opacity 0.3s ease;
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .card:hover::after { opacity: 1; }
+
+    .card-icon {
+      width: 52px;
+      height: 52px;
+      background: linear-gradient(135deg, rgba(47, 128, 237, 0.15), rgba(47, 128, 237, 0.05));
+      border: 1px solid rgba(47, 128, 237, 0.2);
+      border-radius: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      transition: background 0.3s ease, border-color 0.3s ease;
+    }
+
+    .card:hover .card-icon {
+      background: linear-gradient(135deg, rgba(47, 128, 237, 0.25), rgba(47, 128, 237, 0.1));
+      border-color: rgba(47, 128, 237, 0.4);
+    }
+
+    .card-icon svg {
+      width: 26px;
+      height: 26px;
+      color: var(--accent-glow);
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 1.8;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    .card-body { flex: 1; }
+
+    .card-title {
+      font-size: 19px;
+      font-weight: 700;
+      color: var(--white);
+      margin-bottom: 8px;
+      letter-spacing: -0.2px;
+    }
+
+    .card-desc {
+      font-size: 13.5px;
+      color: var(--text-muted);
+      line-height: 1.75;
+      font-weight: 400;
+    }
+
+    .card-cta {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--accent-glow);
+      margin-top: 4px;
+      transition: gap 0.2s ease;
+    }
+
+    .card:hover .card-cta { gap: 10px; }
+
+    .card-cta svg {
+      width: 15px;
+      height: 15px;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      /* RTL: flip arrow direction */
+      transform: scaleX(-1);
+    }
+
+    /* ── Badge chips ── */
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 11px;
+      font-weight: 600;
+      padding: 3px 10px;
+      border-radius: 20px;
+      letter-spacing: 0.3px;
+      align-self: flex-start;
+    }
+
+    .badge-school      { background: rgba(47, 128, 237, 0.12); color: #64b0ff; border: 1px solid rgba(47, 128, 237, 0.2); }
+    .badge-directorate { background: rgba(240, 180, 41, 0.1);  color: #f0c84a; border: 1px solid rgba(240, 180, 41, 0.2); }
+    .badge-ministry    { background: rgba(72, 199, 142, 0.1);  color: #5dd4a3; border: 1px solid rgba(72, 199, 142, 0.2); }
+
+    .badge-dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: currentColor;
+      opacity: 0.8;
+    }
+
+    /* ── Footer ── */
+    footer {
+      text-align: center;
+      padding: 24px 0 40px;
+      font-size: 12.5px;
+      color: var(--text-muted);
+      border-top: 1px solid var(--border);
+      letter-spacing: 0.2px;
+    }
+
+    footer strong { color: var(--text); font-weight: 600; }
+
+    /* ── Animations ── */
+    @keyframes fadeDown {
+      from { opacity: 0; transform: translateY(-16px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(24px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ── Responsive ── */
+    @media (max-width: 600px) {
+      header { padding: 40px 0 28px; }
+      .cards { grid-template-columns: 1fr; }
+      .card  { padding: 28px 22px 24px; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="wrapper">
+
+  <!-- ── Header ── -->
+  <header>
+    <div class="logo-mark">
+      <svg width="36" height="36" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect x="4" y="10" width="28" height="20" rx="3" stroke="white" stroke-width="2" stroke-linejoin="round"/>
+        <path d="M12 10V8C12 6.895 12.895 6 14 6H22C23.105 6 24 6.895 24 8V10" stroke="white" stroke-width="2"/>
+        <path d="M4 17H32" stroke="white" stroke-width="2" stroke-linecap="round"/>
+        <circle cx="18" cy="17" r="3" fill="white"/>
+        <path d="M15 24H21" stroke="white" stroke-width="2" stroke-linecap="round"/>
+        <path d="M11 24H12" stroke="white" stroke-width="2" stroke-linecap="round"/>
+        <path d="M24 24H25" stroke="white" stroke-width="2" stroke-linecap="round"/>
+      </svg>
+    </div>
+
+    <h1 class="site-title">
+      <span>NSAMS</span> — نظام إدارة المدارس الوطني
+    </h1>
+
+    <div class="divider"></div>
+
+    <p class="site-subtitle">
+      منصة موحدة لإدارة البيانات التعليمية على مستوى المدرسة والمديرية والوزارة
+    </p>
+  </header>
+
+  <!-- ── Cards ── -->
+  <div class="cards">
+
+    <!-- School -->
+    <a href="./school/" class="card">
+      <div class="badge badge-school">
+        <span class="badge-dot"></span>
+        المدرسة
+      </div>
+      <div class="card-icon">
+        <svg viewBox="0 0 24 24">
+          <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/>
+          <polyline points="9 22 9 12 15 12 15 22"/>
+        </svg>
+      </div>
+      <div class="card-body">
+        <div class="card-title">بوابة المدرسة</div>
+        <div class="card-desc">
+          إدارة بيانات الطلاب والغيابات والدرجات وتقارير الأداء على مستوى المدرسة.
+        </div>
+      </div>
+      <span class="card-cta">
+        دخول إلى البوابة
+        <svg viewBox="0 0 24 24"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+      </span>
+    </a>
+
+    <!-- Directorate -->
+    <a href="./directorate/" class="card">
+      <div class="badge badge-directorate">
+        <span class="badge-dot"></span>
+        المديرية
+      </div>
+      <div class="card-icon">
+        <svg viewBox="0 0 24 24">
+          <rect x="2" y="7" width="20" height="14" rx="2"/>
+          <path d="M16 7V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v2"/>
+          <line x1="12" y1="12" x2="12" y2="16"/>
+          <line x1="10" y1="14" x2="14" y2="14"/>
+        </svg>
+      </div>
+      <div class="card-body">
+        <div class="card-title">لوحة المديرية</div>
+        <div class="card-desc">
+          متابعة أداء المدارس التابعة وتحليل الإحصاءات والتقارير الموحدة على مستوى المديرية.
+        </div>
+      </div>
+      <span class="card-cta">
+        دخول إلى اللوحة
+        <svg viewBox="0 0 24 24"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+      </span>
+    </a>
+
+    <!-- Ministry -->
+    <a href="./ministry/" class="card">
+      <div class="badge badge-ministry">
+        <span class="badge-dot"></span>
+        الوزارة
+      </div>
+      <div class="card-icon">
+        <svg viewBox="0 0 24 24">
+          <circle cx="12" cy="12" r="10"/>
+          <line x1="2" y1="12" x2="22" y2="12"/>
+          <path d="M12 2a15.3 15.3 0 010 20M12 2a15.3 15.3 0 000 20"/>
+        </svg>
+      </div>
+      <div class="card-body">
+        <div class="card-title">لوحة الوزارة</div>
+        <div class="card-desc">
+          رؤية شاملة على المستوى الوطني: مؤشرات الأداء، المديريات، والإحصاءات التعليمية الكلية.
+        </div>
+      </div>
+      <span class="card-cta">
+        دخول إلى اللوحة
+        <svg viewBox="0 0 24 24"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+      </span>
+    </a>
+
+  </div>
+
+  <!-- ── Footer ── -->
+  <footer>
+    <strong>NSAMS</strong> — النظام الوطني لإدارة المدارس &nbsp;·&nbsp; جميع الحقوق محفوظة &copy; 2025
+  </footer>
+
+</div>
+
+</body>
+</html>
