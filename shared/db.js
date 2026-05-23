@@ -37,23 +37,53 @@ function isOnline() {
 
 // ─── Auth ─────────────────────────────────────────────────────────────────────
 async function login(email, password) {
-  const { data: authData, error: authError } = await db.auth.signInWithPassword({ email, password });
+  // ── 1. مصادقة Supabase Auth ───────────────────────────────────
+  const { data: authData, error: authError } =
+    await db.auth.signInWithPassword({ email, password });
+
   if (authError) throw authError;
 
   const userId = authData.user.id;
+
+  // ── 2. قراءة الملف الشخصي من public.users ────────────────────
+  // نحدد الأعمدة بدقة بدلاً من SELECT * لتقليل احتمال رفض RLS
   const { data: profile, error: profileError } = await db
     .from("users")
     .select("role, school_id, directorate_id, full_name")
     .eq("id", userId)
-    .single();
+    .maybeSingle(); // maybeSingle بدلاً من single لتجنب خطأ PGRST116
 
-  if (profileError) throw profileError;
+  // ── 3. تشخيص واضح لكل سيناريو خطأ ──────────────────────────
+  if (profileError) {
+    // permission denied → RLS لم تُطبَّق بعد أو المستخدم غير موجود في public.users
+    if (profileError.code === "42501") {
+      throw new Error(
+        "لا توجد صلاحية لقراءة بيانات المستخدم. " +
+        "تأكد من تطبيق سياسات RLS الجديدة في setup.sql."
+      );
+    }
+    throw profileError;
+  }
 
+  if (!profile) {
+    // المستخدم موجود في auth لكن غير مُضاف في public.users
+    await db.auth.signOut();
+    throw new Error(
+      "المستخدم غير مسجل في النظام. " +
+      "يرجى إضافة صف في جدول users بنفس UUID الخاص بـ auth.users."
+    );
+  }
+
+  // ── 4. إرجاع الجلسة الكاملة ──────────────────────────────────
   return {
-    user: { id: userId, email, fullName: profile.full_name },
-    role: profile.role,
-    schoolId: profile.school_id,
-    directorateId: profile.directorate_id,
+    user: {
+      id:       userId,
+      email:    authData.user.email,
+      fullName: profile.full_name,
+    },
+    role:           profile.role,
+    schoolId:       profile.school_id,
+    directorateId:  profile.directorate_id,
   };
 }
 
