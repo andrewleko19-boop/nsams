@@ -194,15 +194,19 @@ async function doSync() {
   if (syncing) return;
   syncing = true;
   syncIcon.classList.add('syncing');
+  toast('جاري المزامنة…', 'info', 1500);  // ← أضف هاد السطر
   try {
     const { attendance, reports } = await syncPending();
     const total = attendance.synced + reports.synced;
     if (total > 0) {
       toast(`تمت مزامنة ${total} سجل بنجاح`, 'success');
+    } else {
+      toast('لا يوجد سجلات معلقة', 'info', 2000);  // ← وهاد السطر
     }
     refreshPendingBar();
   } catch (err) {
     console.warn('[NSAMS] sync error', err);
+    toast('تعذّرت المزامنة', 'error');  // ← وهاد السطر
   } finally {
     syncIcon.classList.remove('syncing');
     syncing = false;
