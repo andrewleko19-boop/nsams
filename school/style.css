@@ -406,13 +406,17 @@ textarea.field-input { resize: vertical; min-height: 80px; }
 
 /* Header buttons */
 .hdr-btn {
-  width: 34px; height: 34px;
-  border-radius: var(--r-xs);
+  width: 44px;
+  height: 44px;
+  border-radius: var(--r-sm);
   display: flex;
   align-items: center;
   justify-content: center;
   color: rgba(255,255,255,.75);
   transition: background var(--dur), color var(--dur);
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  cursor: pointer;
 }
 .hdr-btn:hover { background: rgba(255,255,255,.14); color: #fff; }
 
