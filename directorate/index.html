@@ -1,10 +1,10 @@
 <!-- directorate/index.html -->
 <!DOCTYPE html>
-<html lang="en" dir="ltr">
+<html lang="ar" dir="rtl">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>NSAMS – Directorate Dashboard</title>
+  <title>NSAMS – لوحة تحكم المديرية</title>
 
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <link rel="stylesheet" href="style.css" />
@@ -43,67 +43,67 @@
 </head>
 <body>
 
-  <!-- ═══════════════ LOGIN SCREEN ═══════════════ -->
+  <!-- ═══════════════ شاشة تسجيل الدخول ═══════════════ -->
   <div id="login-screen" class="login-overlay">
     <div class="login-card">
       <div class="login-logo">
         <svg class="icon icon-xl"><use href="#icon-school"/></svg>
         <h1>NSAMS</h1>
-        <p>National School Attendance Monitoring System</p>
-        <span class="login-role-badge">Directorate Portal</span>
+        <p>نظام متابعة الحضور المدرسي الوطني</p>
+        <span class="login-role-badge">بوابة المديرية</span>
       </div>
       <div class="form-group">
-        <label for="login-email">Email</label>
+        <label for="login-email">البريد الإلكتروني</label>
         <input type="email" id="login-email" placeholder="directorate@edu.sy" autocomplete="username" />
       </div>
       <div class="form-group">
-        <label for="login-password">Password</label>
+        <label for="login-password">كلمة المرور</label>
         <input type="password" id="login-password" placeholder="••••••••" autocomplete="current-password" />
       </div>
       <button id="login-btn" class="btn btn-primary btn-full">
-        Sign In
+        تسجيل الدخول
       </button>
       <p id="login-error" class="login-error hidden"></p>
     </div>
   </div>
 
-  <!-- ═══════════════ MAIN APP ═══════════════ -->
+  <!-- ═══════════════ التطبيق الرئيسي ═══════════════ -->
   <div id="app" class="hidden">
 
-    <!-- Top Nav -->
+    <!-- شريط التنقل العلوي -->
     <header class="topnav">
       <div class="topnav-brand">
         <svg class="icon"><use href="#icon-school"/></svg>
-        <span>NSAMS <em>Directorate</em></span>
+        <span>NSAMS <em>المديرية</em></span>
       </div>
       <div class="topnav-meta">
         <span id="nav-date" class="nav-date"></span>
         <span id="refresh-countdown" class="refresh-badge">
           <svg class="icon icon-sm"><use href="#icon-clock"/></svg>
-          <span id="countdown-val">30</span>s
+          <span id="countdown-val">30</span>ث
         </span>
-        <button id="manual-refresh-btn" class="btn btn-ghost btn-sm" title="Refresh now">
+        <button id="manual-refresh-btn" class="btn btn-ghost btn-sm" title="تحديث الآن">
           <svg class="icon icon-sm"><use href="#icon-refresh"/></svg>
-          Refresh
+          تحديث
         </button>
         <span id="nav-user" class="nav-user"></span>
         <button id="logout-btn" class="btn btn-ghost btn-sm">
           <svg class="icon icon-sm"><use href="#icon-logout"/></svg>
-          Logout
+          تسجيل الخروج
         </button>
       </div>
     </header>
 
     <main class="main-content">
 
-      <!-- Stats Row -->
+      <!-- صف الإحصائيات -->
       <section class="stats-row" id="stats-row">
         <div class="stat-card" id="stat-teachers">
           <div class="stat-icon stat-icon--blue">
             <svg class="icon"><use href="#icon-users"/></svg>
           </div>
           <div class="stat-body">
-            <span class="stat-label">Teachers Present</span>
+            <span class="stat-label">المعلمون الحاضرون</span>
             <span class="stat-value" id="stat-teachers-val">—</span>
             <span class="stat-sub" id="stat-teachers-sub"></span>
           </div>
@@ -113,7 +113,7 @@
             <svg class="icon"><use href="#icon-users"/></svg>
           </div>
           <div class="stat-body">
-            <span class="stat-label">Students Present</span>
+            <span class="stat-label">الطلاب الحاضرون</span>
             <span class="stat-value" id="stat-students-val">—</span>
             <span class="stat-sub" id="stat-students-sub"></span>
           </div>
@@ -123,7 +123,7 @@
             <svg class="icon"><use href="#icon-alert"/></svg>
           </div>
           <div class="stat-body">
-            <span class="stat-label">Active Reports</span>
+            <span class="stat-label">التقارير النشطة</span>
             <span class="stat-value" id="stat-reports-val">—</span>
             <span class="stat-sub" id="stat-reports-sub"></span>
           </div>
@@ -133,67 +133,67 @@
             <svg class="icon"><use href="#icon-school"/></svg>
           </div>
           <div class="stat-body">
-            <span class="stat-label">Schools Reporting</span>
+            <span class="stat-label">المدارس المُبلِّغة</span>
             <span class="stat-value" id="stat-schools-val">—</span>
             <span class="stat-sub" id="stat-schools-sub"></span>
           </div>
         </div>
       </section>
 
-      <!-- Two-column layout: Map + Pending Reports -->
+      <!-- تخطيط عمودين: الخريطة + التقارير المعلقة -->
       <div class="two-col">
 
-        <!-- Map Panel -->
+        <!-- لوحة الخريطة -->
         <section class="panel map-panel">
           <div class="panel-header">
             <h2>
               <svg class="icon"><use href="#icon-map"/></svg>
-              School Map
+              خريطة المدارس
             </h2>
             <div class="map-legend">
-              <span class="legend-dot legend-dot--green"></span>Normal
-              <span class="legend-dot legend-dot--amber"></span>Low Attendance
-              <span class="legend-dot legend-dot--red"></span>Critical / No Data
+              <span class="legend-dot legend-dot--green"></span>طبيعي
+              <span class="legend-dot legend-dot--amber"></span>حضور منخفض
+              <span class="legend-dot legend-dot--red"></span>حرج / لا توجد بيانات
             </div>
           </div>
           <div id="map"></div>
         </section>
 
-        <!-- Pending Reports Panel -->
+        <!-- لوحة التقارير المعلقة -->
         <section class="panel pending-panel">
           <div class="panel-header">
             <h2>
               <svg class="icon"><use href="#icon-alert"/></svg>
-              Pending Reports
+              التقارير المعلقة
             </h2>
             <span id="pending-count" class="badge badge--amber">0</span>
           </div>
           <div id="pending-list" class="pending-list">
-            <p class="empty-state">No pending reports.</p>
+            <p class="empty-state">لا توجد تقارير معلقة.</p>
           </div>
         </section>
 
       </div>
 
-      <!-- Full Reports Table -->
+      <!-- جدول التقارير الكامل -->
       <section class="panel">
         <div class="panel-header">
           <h2>
             <svg class="icon"><use href="#icon-eye"/></svg>
-            All Reports
+            جميع التقارير
           </h2>
           <div class="table-filters">
             <select id="filter-status" class="select-sm">
-              <option value="">All Statuses</option>
-              <option value="pending">Pending</option>
-              <option value="reviewed">Reviewed</option>
-              <option value="resolved">Resolved</option>
+              <option value="">جميع الحالات</option>
+              <option value="pending">معلق</option>
+              <option value="reviewed">تمت المراجعة</option>
+              <option value="resolved">تم الحل</option>
             </select>
             <select id="filter-type" class="select-sm">
-              <option value="">All Types</option>
-              <option value="low_attendance">Low Attendance</option>
-              <option value="absent_teacher">Absent Teacher</option>
-              <option value="other">Other</option>
+              <option value="">جميع الأنواع</option>
+              <option value="low_attendance">حضور منخفض</option>
+              <option value="absent_teacher">معلم غائب</option>
+              <option value="other">أخرى</option>
             </select>
           </div>
         </div>
@@ -201,16 +201,16 @@
           <table id="reports-table" class="data-table">
             <thead>
               <tr>
-                <th>School</th>
-                <th>Type</th>
-                <th>Description</th>
-                <th>Submitted</th>
-                <th>Status</th>
-                <th>Actions</th>
+                <th>المدرسة</th>
+                <th>النوع</th>
+                <th>الوصف</th>
+                <th>تاريخ الإرسال</th>
+                <th>الحالة</th>
+                <th>الإجراءات</th>
               </tr>
             </thead>
             <tbody id="reports-tbody">
-              <tr><td colspan="6" class="empty-state">Loading reports…</td></tr>
+              <tr><td colspan="6" class="empty-state">جارٍ تحميل التقارير…</td></tr>
             </tbody>
           </table>
         </div>
