@@ -111,6 +111,17 @@ async function getSchoolStatus(schoolId, date) {
   };
 }
 
+async function getSchoolById(schoolId) {
+  const { data, error } = await supabase
+    .from('schools')
+    .select('id, name, total_teachers, total_students, directorate_id')
+    .eq('id', schoolId)
+    .single();
+ 
+  if (error) throw error;
+  return data;
+}
+
 // ─── Attendance ───────────────────────────────────────────────────────────────
 async function syncAttendanceRecord(record) {
   const { localId, synced: _synced, createdAt: _c, ...payload } = record;
@@ -401,7 +412,7 @@ window.addEventListener("online", () => syncPending().catch(console.error));
 
 window.NSAMS_DB = {
   login, logout, getCurrentUser,
-  getSchools, getSchoolStatus,
+  getSchools, getSchoolStatus, getSchoolById, 
   saveAttendance, getPendingAttendance, markAttendanceSynced,
   submitReport, getPendingReports, markReportSynced,
   getReportsForDirectorate, updateReportStatus,

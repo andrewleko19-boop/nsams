@@ -13,6 +13,7 @@ const {
   login,
   logout,
   getCurrentUser,
+  getSchoolById,       // ← NEW: fetches real school row from DB
   saveAttendance,
   submitReport,
   syncPending,
@@ -20,24 +21,84 @@ const {
   getPendingReports,
 } = window.NSAMS_DB;
 
-// ── Mock school data (MVP – replace with db.getSchoolProfile once implemented) ─
-const MOCK_SCHOOL = {
-  id:            '22222222-2222-2222-2222-222222222222',
-  name:          'مدرسة الشهيد باسل الأسد الابتدائية',
-  totalTeachers: 24,
-  totalStudents: 480,
-};
-
 // ── App state ─────────────────────────────────────────────────────────────────
 const S = {
   user:           null,   // { user, role, schoolId, directorateId }
-  school:         { ...MOCK_SCHOOL },
+  school:         null,   // populated by loadSchoolData() after login
   absentTeachers: [],     // string[]
   attSubmitted:   false,
   severity:       1,
   photoB64:       null,
   photoMime:      null,
 };
+
+// ── School data cache helpers ─────────────────────────────────────────────────
+const SCHOOL_CACHE_PREFIX = 'nsams_school_';
+
+function cacheSchool(schoolId, data) {
+  try {
+    localStorage.setItem(SCHOOL_CACHE_PREFIX + schoolId, JSON.stringify(data));
+  } catch { /* storage quota exceeded — non-fatal */ }
+}
+
+function getCachedSchool(schoolId) {
+  try {
+    const raw = localStorage.getItem(SCHOOL_CACHE_PREFIX + schoolId);
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Normalise a raw DB row into the shape the rest of the app uses:
+ *   { id, name, totalTeachers, totalStudents }
+ */
+function normaliseSchool(row) {
+  return {
+    id:            row.id,
+    name:          row.name,
+    totalTeachers: row.total_teachers ?? 0,
+    totalStudents: row.total_students ?? 0,
+  };
+}
+
+/**
+ * Fetch school from Supabase, fall back to localStorage cache when offline.
+ * Sets S.school and updates the cache on success.
+ * Throws only if both the network AND the cache fail.
+ */
+async function loadSchoolData() {
+  const schoolId = S.user?.schoolId;
+  if (!schoolId) throw new Error('No schoolId in session');
+
+  // 1. Try live fetch first (works online and when Supabase is reachable)
+  if (navigator.onLine) {
+    try {
+      const row    = await getSchoolById(schoolId);
+      const school = normaliseSchool(row);
+      S.school     = school;
+      cacheSchool(schoolId, school);   // keep cache fresh
+      return;
+    } catch (err) {
+      console.warn('[NSAMS] live school fetch failed, falling back to cache', err);
+      // fall through to cache
+    }
+  }
+
+  // 2. Offline (or live fetch failed) — use cached data
+  const cached = getCachedSchool(schoolId);
+  if (cached) {
+    S.school = cached;
+    toast('يعمل التطبيق بدون اتصال — يتم عرض البيانات المحفوظة', 'warning', 4000);
+    return;
+  }
+
+  // 3. No cache at all — we genuinely can't show real data
+  // Use a skeletal object so the UI doesn't crash, but make the name obvious
+  S.school = { id: schoolId, name: 'لم يتم تحميل بيانات المدرسة', totalTeachers: 0, totalStudents: 0 };
+  toast('تعذّر تحميل بيانات المدرسة. تحقق من الاتصال وأعد تسجيل الدخول.', 'error', 6000);
+}
 
 // ── DOM helpers ───────────────────────────────────────────────────────────────
 const el   = (id) => document.getElementById(id);
@@ -194,19 +255,19 @@ async function doSync() {
   if (syncing) return;
   syncing = true;
   syncIcon.classList.add('syncing');
-  toast('جاري المزامنة…', 'info', 1500);  // ← أضف هاد السطر
+  toast('جاري المزامنة…', 'info', 1500);
   try {
     const { attendance, reports } = await syncPending();
     const total = attendance.synced + reports.synced;
     if (total > 0) {
       toast(`تمت مزامنة ${total} سجل بنجاح`, 'success');
     } else {
-      toast('لا يوجد سجلات معلقة', 'info', 2000);  // ← وهاد السطر
+      toast('لا يوجد سجلات معلقة', 'info', 2000);
     }
     refreshPendingBar();
   } catch (err) {
     console.warn('[NSAMS] sync error', err);
-    toast('تعذّرت المزامنة', 'error');  // ← وهاد السطر
+    toast('تعذّرت المزامنة', 'error');
   } finally {
     syncIcon.classList.remove('syncing');
     syncing = false;
@@ -235,14 +296,13 @@ function setStatusPending() {
 // ── Teacher counter ───────────────────────────────────────────────────────────
 function animateBump(numEl) {
   numEl.classList.remove('bump');
-  // force reflow
   void numEl.offsetWidth;
   numEl.classList.add('bump');
   numEl.addEventListener('animationend', () => numEl.classList.remove('bump'), { once: true });
 }
 
 function refreshTeacherUI() {
-  const total   = S.school.totalTeachers;
+  const total   = S.school?.totalTeachers ?? 0;
   const absent  = S.absentTeachers.length;
   const present = Math.max(0, total - absent);
 
@@ -305,7 +365,7 @@ btnSubmitAtt.addEventListener('click', async () => {
   const studPresent = parseInt(inStuPresent.value, 10) || 0;
   const studAbsent  = parseInt(inStuAbsent.value,  10) || 0;
   const absentCount = S.absentTeachers.length;
-  const total       = S.school.totalTeachers;
+  const total       = S.school?.totalTeachers ?? 0;
 
   const record = {
     school_id:        S.school.id,
@@ -546,7 +606,8 @@ function setLoginBusy(busy) {
 btnLogout.addEventListener('click', async () => {
   if (!confirm('هل تريد تسجيل الخروج؟')) return;
   try { await logout(); } catch { /* ignore */ }
-  S.user         = null;
+  S.user           = null;
+  S.school         = null;
   S.absentTeachers = [];
   S.attSubmitted   = false;
   showScreen('login');
@@ -556,8 +617,11 @@ btnLogout.addEventListener('click', async () => {
 async function initApp() {
   showScreen('app');
 
-  // Header
-  hdrSchool.textContent = S.school.name;
+  // ── Fetch real school data from DB (offline-safe) ──────────────────────────
+  await loadSchoolData();
+
+  // Header — now uses the live DB name, not a hardcoded string
+  hdrSchool.textContent = S.school?.name ?? '…';
   hdrDate.textContent   = formatDateAr(todayISO());
 
   // Reset attendance state
