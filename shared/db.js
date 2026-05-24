@@ -1,9 +1,17 @@
-const SUPABASE_URL = "https://xocrzpjfvizgnsybegwr.supabase.co";
+// ─── FIX #1: استيراد Supabase SDK الصحيح بدلاً من `const { createClient } = supabase` ───
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+
+const SUPABASE_URL     = "https://xocrzpjfvizgnsybegwr.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_HCVzNgEJmov38FWXRO1uFw_DG1d87Y4";
 
-const { createClient } = supabase;
 const db = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
+// ─── FIX #2: تصدير db كـ supabase حتى يعمل import { supabase } from '../shared/db.js' ───
+export { db as supabase };
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Queue helpers (offline support)
+// ─────────────────────────────────────────────────────────────────────────────
 const QUEUE_ATTENDANCE = "nsams_pending_attendance";
 const QUEUE_REPORTS    = "nsams_pending_reports";
 
@@ -205,7 +213,7 @@ function markReportSynced(localId) {
 async function getReportsForDirectorate(directorateId) {
   const { data, error } = await db
     .from("emergency_reports")
-    .select("id, type, description, status, receipt_number, created_at, school:schools (id, name)")
+    .select("id, type, description, status, receipt_number, created_at, school:schools!inner(id, name)")
     .eq("schools.directorate_id", directorateId)
     .order("created_at", { ascending: false });
   if (error) throw error;
@@ -226,11 +234,11 @@ async function getTodaySummary(directorateId) {
   const today = new Date().toISOString().slice(0, 10);
   const [attendanceRes, reportsRes] = await Promise.all([
     db.from("daily_attendance")
-      .select("teachers_present, students_present, school:schools!inner (directorate_id)")
+      .select("teachers_present, students_present, school:schools!inner(directorate_id)")
       .eq("date", today)
       .eq("schools.directorate_id", directorateId),
     db.from("emergency_reports")
-      .select("id, type, status, created_at, school:schools!inner (name, directorate_id)")
+      .select("id, type, status, created_at, school:schools!inner(name, directorate_id)")
       .in("status", ["open", "acknowledged"])
       .eq("schools.directorate_id", directorateId)
       .order("created_at", { ascending: true })
@@ -273,6 +281,105 @@ async function getSchoolsAttendanceStatus(directorateId, date) {
   return result;
 }
 
+// ─── Ministry Functions ───────────────────────────────────────────────────────
+// تعمل مع الـ schema الفعلي: daily_attendance(school_id, date, students_present, teachers_present)
+// ملاحظة: إذا كان في جدولك عمود students_absent أو students_total، يمكن إضافته هنا.
+
+/**
+ * جلب ملخص الحضور الوطني مجمعاً حسب المحافظة.
+ * يعيد مصفوفة من { governorate, present, schoolsReported, totalSchools, dirCount }
+ */
+async function getMinistryAttendanceSummary(date) {
+  const isoDate = date instanceof Date ? date.toISOString().slice(0, 10) : date;
+
+  // 1. جلب جميع المديريات مع المحافظة
+  const { data: directorates, error: dirErr } = await db
+    .from("directorates")
+    .select("id, name, governorate")
+    .order("governorate");
+  if (dirErr) throw dirErr;
+
+  if (!directorates || directorates.length === 0) return [];
+
+  // 2. جلب جميع المدارس مع معرف المديرية
+  const { data: schools, error: schErr } = await db
+    .from("schools")
+    .select("id, directorate_id");
+  if (schErr) throw schErr;
+
+  const allSchoolIds = (schools || []).map(s => s.id);
+
+  // 3. جلب سجلات الحضور اليومية (مجمعة لكل مدرسة)
+  const { data: attendance, error: attErr } = await db
+    .from("daily_attendance")
+    .select("school_id, students_present, teachers_present")
+    .eq("date", isoDate)
+    .in("school_id", allSchoolIds.length > 0 ? allSchoolIds : ["__none__"]);
+  if (attErr) throw attErr;
+
+  // بناء خرائط البحث
+  const schoolToDir  = {};
+  const dirToSchools = {};
+  for (const s of schools || []) {
+    schoolToDir[s.id] = s.directorate_id;
+    if (!dirToSchools[s.directorate_id]) dirToSchools[s.directorate_id] = new Set();
+    dirToSchools[s.directorate_id].add(s.id);
+  }
+
+  // تجميع حسب المديرية
+  const dirAgg = {};
+  for (const d of directorates) {
+    dirAgg[d.id] = {
+      studentsPresent:  0,
+      teachersPresent:  0,
+      schoolsReported:  0,
+      totalSchools:     dirToSchools[d.id]?.size || 0,
+    };
+  }
+  for (const rec of attendance || []) {
+    const dirId = schoolToDir[rec.school_id];
+    if (dirId && dirAgg[dirId]) {
+      dirAgg[dirId].studentsPresent += rec.students_present || 0;
+      dirAgg[dirId].teachersPresent += rec.teachers_present || 0;
+      dirAgg[dirId].schoolsReported++;
+    }
+  }
+
+  // تجميع حسب المحافظة
+  const govMap = {};
+  for (const d of directorates) {
+    const gov = d.governorate || "Unknown";
+    if (!govMap[gov]) {
+      govMap[gov] = {
+        governorate:     gov,
+        studentsPresent: 0,
+        teachersPresent: 0,
+        schoolsReported: 0,
+        totalSchools:    0,
+        dirCount:        0,
+      };
+    }
+    const agg = dirAgg[d.id];
+    govMap[gov].studentsPresent += agg.studentsPresent;
+    govMap[gov].teachersPresent += agg.teachersPresent;
+    govMap[gov].schoolsReported += agg.schoolsReported;
+    govMap[gov].totalSchools    += agg.totalSchools;
+    govMap[gov].dirCount++;
+  }
+
+  return Object.values(govMap).sort((a, b) => a.governorate.localeCompare(b.governorate));
+}
+
+/** جلب عدد المحافظات الفريدة */
+async function getGovernoratesCount() {
+  const { data, error } = await db
+    .from("directorates")
+    .select("governorate");
+  if (error) throw error;
+  const unique = new Set((data || []).map(d => d.governorate).filter(Boolean));
+  return unique.size;
+}
+
 // ─── Sync ─────────────────────────────────────────────────────────────────────
 async function syncPending() {
   const results = { attendance: { synced: 0, failed: 0 }, reports: { synced: 0, failed: 0 } };
@@ -299,5 +406,7 @@ window.NSAMS_DB = {
   submitReport, getPendingReports, markReportSynced,
   getReportsForDirectorate, updateReportStatus,
   getTodaySummary, getSchoolsAttendanceStatus,
+  // Ministry
+  getMinistryAttendanceSummary, getGovernoratesCount,
   syncPending,
 };

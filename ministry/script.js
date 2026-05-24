@@ -1,3 +1,4 @@
+// ─── FIX #1: الاستيراد يعمل الآن لأن db.js يصدر supabase صراحةً ──────────────
 import { supabase } from '../shared/db.js';
 
 // ── DOM refs ──────────────────────────────────────────────────────────────────
@@ -16,9 +17,9 @@ const lastUpdated   = document.getElementById('last-updated');
 
 // Stats
 const statGov     = document.getElementById('stat-governorates');
-const statTotal   = document.getElementById('stat-total');
+const statTotal   = document.getElementById('stat-total');    // schools reported
 const statPresent = document.getElementById('stat-present');
-const statAbsent  = document.getElementById('stat-absent');
+const statAbsent  = document.getElementById('stat-absent');   // schools NOT reported
 const statRate    = document.getElementById('stat-rate');
 
 // Table
@@ -29,11 +30,11 @@ const govTbody     = document.getElementById('gov-tbody');
 const govTfoot     = document.getElementById('gov-tfoot');
 
 // ── State ─────────────────────────────────────────────────────────────────────
-let tableData = []; // array of row objects for CSV export
+let tableData = [];
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
-const fmt = (n) => (n === null || n === undefined) ? '—' : Number(n).toLocaleString();
-const pct = (part, total) => total > 0 ? ((part / total) * 100).toFixed(1) + '%' : '—';
+const fmt  = (n) => (n === null || n === undefined) ? '—' : Number(n).toLocaleString();
+const pct  = (part, total) => total > 0 ? ((part / total) * 100).toFixed(1) + '%' : '—';
 const today = () => new Date().toISOString().split('T')[0];
 
 function showError(msg) {
@@ -102,14 +103,14 @@ loginBtn.addEventListener('click', async () => {
 
   if (!email || !password) { showError('Please enter email and password.'); return; }
 
-  loginBtn.disabled = true;
+  loginBtn.disabled    = true;
   loginBtn.textContent = 'Signing in…';
 
   const { data, error } = await supabase.auth.signInWithPassword({ email, password });
 
   if (error) {
     showError(error.message);
-    loginBtn.disabled = false;
+    loginBtn.disabled    = false;
     loginBtn.textContent = 'Sign In';
     return;
   }
@@ -118,7 +119,7 @@ loginBtn.addEventListener('click', async () => {
   if (!ok) {
     showError('Access denied. This portal is for Ministry users only.');
     await supabase.auth.signOut();
-    loginBtn.disabled = false;
+    loginBtn.disabled    = false;
     loginBtn.textContent = 'Sign In';
     return;
   }
@@ -130,9 +131,9 @@ logoutBtn.addEventListener('click', async () => {
   await supabase.auth.signOut();
   dashboard.classList.add('hidden');
   loginScreen.classList.remove('hidden');
-  loginBtn.disabled = false;
+  loginBtn.disabled    = false;
   loginBtn.textContent = 'Sign In';
-  emailInput.value = '';
+  emailInput.value    = '';
   passwordInput.value = '';
   tableData = [];
 });
@@ -145,126 +146,105 @@ function showDashboard(email) {
   loadAllData();
 }
 
-// ── Data fetching ─────────────────────────────────────────────────────────────
-
-/**
- * Fetch all directorates and for each one aggregate today's attendance.
- *
- * Schema assumed from setup.sql:
- *   directorates(id, name, governorate)
- *   schools(id, directorate_id)
- *   attendance_records(id, school_id, student_id, date, status)
- *   students(id, school_id)
- *
- * We group by governorate (each directorate belongs to one governorate).
- * For MVP we do two queries: fetch directorates, then one attendance query
- * filtered to today, then aggregate in JS. This avoids N+1 calls.
- */
+// ── Data Fetching ─────────────────────────────────────────────────────────────
+//
+// الـ schema الفعلي (من setup.sql):
+//   directorates(id, name, governorate)
+//   schools(id, directorate_id, name, ...)
+//   daily_attendance(id, school_id, date, students_present, teachers_present)
+//
+// لا يوجد attendance_records أو students — الحضور مجمع لكل مدرسة يومياً.
+// المقياس المستخدم:
+//   - "Students Present" = مجموع students_present من daily_attendance
+//   - "Schools Reported" = عدد المدارس التي رفعت سجل اليوم
+//   - "Schools Silent"   = المدارس التي لم ترفع (totalSchools - schoolsReported)
+//
 async function loadAllData() {
   tableLoading.classList.remove('hidden');
   tableWrapper.classList.add('hidden');
   tableEmpty.classList.add('hidden');
-
-  // Reset stats
   [statGov, statTotal, statPresent, statAbsent, statRate].forEach(el => el.textContent = '—');
 
   try {
-    // 1. All directorates
+    // 1. جميع المديريات
     const { data: directorates, error: dirErr } = await supabase
       .from('directorates')
       .select('id, name, governorate')
       .order('governorate');
-
     if (dirErr) throw dirErr;
-    if (!directorates || directorates.length === 0) {
-      showEmpty();
-      return;
-    }
 
-    // 2. All schools with their directorate_id
+    if (!directorates || directorates.length === 0) { showEmpty('No directorates found.'); return; }
+
+    // 2. جميع المدارس مع معرف المديرية
     const { data: schools, error: schErr } = await supabase
       .from('schools')
       .select('id, directorate_id');
-
     if (schErr) throw schErr;
-
-    // Build maps
-    const schoolToDirectorate = {};
-    const directorateSchools  = {}; // dir_id -> Set of school_ids
-    (schools || []).forEach(s => {
-      schoolToDirectorate[s.id] = s.directorate_id;
-      if (!directorateSchools[s.directorate_id]) directorateSchools[s.directorate_id] = new Set();
-      directorateSchools[s.directorate_id].add(s.id);
-    });
 
     const allSchoolIds = (schools || []).map(s => s.id);
 
-    // 3. Today's attendance records (all at once)
-    const { data: records, error: recErr } = await supabase
-      .from('attendance_records')
-      .select('school_id, status')
-      .in('school_id', allSchoolIds.length > 0 ? allSchoolIds : ['__none__'])
-      .eq('date', today());
-
-    if (recErr) throw recErr;
-
-    // 4. Total students per school
-    const { data: studentCounts, error: stuErr } = await supabase
-      .from('students')
-      .select('school_id')
+    // 3. سجلات الحضور اليومية لهذا اليوم فقط
+    //    نختار students_present و teachers_present — وهي الأعمدة الموجودة فعلياً
+    const { data: attendance, error: attErr } = await supabase
+      .from('daily_attendance')
+      .select('school_id, students_present, teachers_present')
+      .eq('date', today())
       .in('school_id', allSchoolIds.length > 0 ? allSchoolIds : ['__none__']);
+    if (attErr) throw attErr;
 
-    if (stuErr) throw stuErr;
+    // بناء خرائط البحث
+    const schoolToDir  = {};
+    const dirToSchools = {};
+    for (const s of schools || []) {
+      schoolToDir[s.id] = s.directorate_id;
+      if (!dirToSchools[s.directorate_id]) dirToSchools[s.directorate_id] = new Set();
+      dirToSchools[s.directorate_id].add(s.id);
+    }
 
-    // Map: school_id -> student count
-    const studentsPerSchool = {};
-    (studentCounts || []).forEach(s => {
-      studentsPerSchool[s.school_id] = (studentsPerSchool[s.school_id] || 0) + 1;
-    });
+    // تجميع حسب المديرية
+    const dirAgg = {};
+    for (const d of directorates) {
+      dirAgg[d.id] = {
+        studentsPresent: 0,
+        teachersPresent: 0,
+        schoolsReported: 0,
+        totalSchools:    dirToSchools[d.id]?.size || 0,
+      };
+    }
+    for (const rec of attendance || []) {
+      const dirId = schoolToDir[rec.school_id];
+      if (dirId && dirAgg[dirId]) {
+        dirAgg[dirId].studentsPresent += rec.students_present || 0;
+        dirAgg[dirId].teachersPresent += rec.teachers_present || 0;
+        dirAgg[dirId].schoolsReported++;
+      }
+    }
 
-    // 5. Aggregate per directorate
-    const dirAgg = {}; // dir_id -> { totalStudents, present, absent, schoolCount }
-    directorates.forEach(d => {
-      dirAgg[d.id] = { totalStudents: 0, present: 0, absent: 0, schoolCount: 0 };
-    });
-
-    // Count students per directorate
-    Object.entries(studentsPerSchool).forEach(([schoolId, count]) => {
-      const dirId = schoolToDirectorate[schoolId];
-      if (dirId && dirAgg[dirId]) dirAgg[dirId].totalStudents += count;
-    });
-
-    // Count school count per directorate
-    Object.entries(directorateSchools).forEach(([dirId, schoolSet]) => {
-      if (dirAgg[dirId]) dirAgg[dirId].schoolCount = schoolSet.size;
-    });
-
-    // Count attendance per directorate
-    (records || []).forEach(rec => {
-      const dirId = schoolToDirectorate[rec.school_id];
-      if (!dirId || !dirAgg[dirId]) return;
-      if (rec.status === 'present') dirAgg[dirId].present++;
-      else if (rec.status === 'absent') dirAgg[dirId].absent++;
-    });
-
-    // 6. Group directorates by governorate
-    const govMap = {}; // governorate name -> aggregated totals
-    directorates.forEach(d => {
+    // تجميع حسب المحافظة
+    const govMap = {};
+    for (const d of directorates) {
       const gov = d.governorate || 'Unknown';
       if (!govMap[gov]) {
-        govMap[gov] = { governorate: gov, totalStudents: 0, present: 0, absent: 0, schoolCount: 0, dirCount: 0 };
+        govMap[gov] = {
+          governorate:     gov,
+          studentsPresent: 0,
+          teachersPresent: 0,
+          schoolsReported: 0,
+          totalSchools:    0,
+          dirCount:        0,
+        };
       }
       const agg = dirAgg[d.id];
-      govMap[gov].totalStudents += agg.totalStudents;
-      govMap[gov].present       += agg.present;
-      govMap[gov].absent        += agg.absent;
-      govMap[gov].schoolCount   += agg.schoolCount;
+      govMap[gov].studentsPresent += agg.studentsPresent;
+      govMap[gov].teachersPresent += agg.teachersPresent;
+      govMap[gov].schoolsReported += agg.schoolsReported;
+      govMap[gov].totalSchools    += agg.totalSchools;
       govMap[gov].dirCount++;
-    });
+    }
 
     const rows = Object.values(govMap).sort((a, b) => a.governorate.localeCompare(b.governorate));
 
-    if (rows.length === 0) { showEmpty(); return; }
+    if (rows.length === 0) { showEmpty('No data available.'); return; }
 
     renderStats(rows);
     renderTable(rows);
@@ -273,86 +253,99 @@ async function loadAllData() {
   } catch (err) {
     console.error('NSAMS Ministry load error:', err);
     tableLoading.classList.add('hidden');
-    tableEmpty.textContent = 'Error loading data: ' + (err.message || err);
+    tableEmpty.textContent = 'Error loading data: ' + (err.message || String(err));
     tableEmpty.classList.remove('hidden');
   }
 }
 
-function showEmpty() {
+function showEmpty(msg = 'No attendance data available for today.') {
   tableLoading.classList.add('hidden');
+  tableEmpty.textContent = msg;
   tableEmpty.classList.remove('hidden');
 }
 
-// ── Render stats row ──────────────────────────────────────────────────────────
+// ── Render Stats ──────────────────────────────────────────────────────────────
 function renderStats(rows) {
-  let totalStudents = 0, totalPresent = 0, totalAbsent = 0;
-  rows.forEach(r => {
-    totalStudents += r.totalStudents;
-    totalPresent  += r.present;
-    totalAbsent   += r.absent;
-  });
+  let totalStudentsPresent = 0;
+  let totalSchoolsReported = 0;
+  let totalSchools         = 0;
 
-  statGov.textContent     = rows.length;
-  statTotal.textContent   = fmt(totalStudents);
-  statPresent.textContent = fmt(totalPresent);
-  statAbsent.textContent  = fmt(totalAbsent);
-  statRate.textContent    = pct(totalPresent, totalPresent + totalAbsent);
+  for (const r of rows) {
+    totalStudentsPresent += r.studentsPresent;
+    totalSchoolsReported += r.schoolsReported;
+    totalSchools         += r.totalSchools;
+  }
+
+  const schoolsSilent = totalSchools - totalSchoolsReported;
+
+  statGov.textContent     = rows.length;                   // عدد المحافظات
+  statTotal.textContent   = fmt(totalSchoolsReported);     // مدارس رفعت
+  statPresent.textContent = fmt(totalStudentsPresent);     // طلاب حاضرون
+  statAbsent.textContent  = fmt(Math.max(0, schoolsSilent)); // مدارس لم ترفع
+  statRate.textContent    = pct(totalSchoolsReported, totalSchools); // نسبة رفع التقارير
 }
 
-// ── Render table ──────────────────────────────────────────────────────────────
+// ── Render Table ──────────────────────────────────────────────────────────────
 function renderTable(rows) {
   tableLoading.classList.add('hidden');
+  tableData = rows;
 
-  tableData = rows; // store for CSV
-
-  let totalStudents = 0, totalPresent = 0, totalAbsent = 0, totalSchools = 0;
+  let totStudentsPresent = 0;
+  let totSchoolsReported = 0;
+  let totSchools         = 0;
 
   govTbody.innerHTML = rows.map((row, i) => {
-    const attended = row.present + row.absent;
-    const rate     = attended > 0 ? (row.present / attended * 100) : null;
-    const rateStr  = rate !== null ? rate.toFixed(1) : null;
+    const reportingRate    = row.totalSchools > 0
+      ? (row.schoolsReported / row.totalSchools * 100)
+      : null;
+    const reportingRateStr = reportingRate !== null ? reportingRate.toFixed(1) : null;
+    const barClass         = rateBarClass(reportingRateStr);
+    const barWidth         = reportingRate !== null ? reportingRate.toFixed(1) : 0;
 
-    totalStudents += row.totalStudents;
-    totalPresent  += row.present;
-    totalAbsent   += row.absent;
-    totalSchools  += row.schoolCount;
+    totStudentsPresent += row.studentsPresent;
+    totSchoolsReported += row.schoolsReported;
+    totSchools         += row.totalSchools;
 
-    const barClass = rateBarClass(rateStr);
-    const barWidth = rate !== null ? rate.toFixed(1) : 0;
+    const schoolsSilent = row.totalSchools - row.schoolsReported;
 
     return `
       <tr>
         <td>${i + 1}</td>
         <td><strong>${row.governorate}</strong></td>
-        <td>${fmt(row.schoolCount)}</td>
-        <td>${fmt(row.totalStudents)}</td>
-        <td style="color:#4ade80">${fmt(row.present)}</td>
-        <td style="color:#f87171">${fmt(row.absent)}</td>
+        <td>${fmt(row.totalSchools)}</td>
+        <td>${fmt(row.studentsPresent)}</td>
+        <td style="color:#4ade80">${fmt(row.schoolsReported)}</td>
+        <td style="color:#f87171">${fmt(Math.max(0, schoolsSilent))}</td>
         <td>
           <div class="rate-cell">
             <div class="rate-bar-bg">
               <div class="rate-bar-fill ${barClass}" style="width:${barWidth}%"></div>
             </div>
-            <span class="rate-text" style="color:${barClass === 'green' ? '#4ade80' : barClass === 'yellow' ? '#fde047' : barClass === 'red' ? '#f87171' : '#64748b'}">
-              ${rateStr !== null ? rateStr + '%' : '—'}
+            <span class="rate-text" style="color:${
+              barClass === 'green'  ? '#4ade80' :
+              barClass === 'yellow' ? '#fde047' :
+              barClass === 'red'    ? '#f87171' : '#64748b'
+            }">
+              ${reportingRateStr !== null ? reportingRateStr + '%' : '—'}
             </span>
           </div>
         </td>
-        <td>${rateBadge(rateStr)}</td>
+        <td>${rateBadge(reportingRateStr)}</td>
       </tr>`;
   }).join('');
 
-  const totalAttended = totalPresent + totalAbsent;
-  const nationalRate  = totalAttended > 0 ? (totalPresent / totalAttended * 100).toFixed(1) : null;
+  const nationalRate = totSchools > 0
+    ? (totSchoolsReported / totSchools * 100).toFixed(1)
+    : null;
 
   govTfoot.innerHTML = `
     <tr>
       <td></td>
       <td>National Total</td>
-      <td>${fmt(totalSchools)}</td>
-      <td>${fmt(totalStudents)}</td>
-      <td style="color:#4ade80">${fmt(totalPresent)}</td>
-      <td style="color:#f87171">${fmt(totalAbsent)}</td>
+      <td>${fmt(totSchools)}</td>
+      <td>${fmt(totStudentsPresent)}</td>
+      <td style="color:#4ade80">${fmt(totSchoolsReported)}</td>
+      <td style="color:#f87171">${fmt(Math.max(0, totSchools - totSchoolsReported))}</td>
       <td>${nationalRate !== null ? nationalRate + '%' : '—'}</td>
       <td>${rateBadge(nationalRate)}</td>
     </tr>`;
@@ -361,10 +354,10 @@ function renderTable(rows) {
 }
 
 // ── Refresh ───────────────────────────────────────────────────────────────────
-refreshBtn.addEventListener('click', () => {
-  const { data: { session } } = supabase.auth.getSession().then(({ data }) => {
-    if (data.session) loadAllData();
-  });
+// FIX #2: الكود الأصلي كان يخلط destructuring مع .then() — هذا async صحيح
+refreshBtn.addEventListener('click', async () => {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (session) loadAllData();
 });
 
 // ── CSV Export ────────────────────────────────────────────────────────────────
@@ -372,36 +365,38 @@ exportBtn.addEventListener('click', () => {
   if (!tableData.length) return;
 
   const dateStr = today();
-  const headers = ['Governorate', 'Schools', 'Total Students', 'Present', 'Absent', 'Attendance Rate (%)'];
+  const headers = ['Governorate', 'Total Schools', 'Students Present', 'Schools Reported', 'Schools Silent', 'Reporting Rate (%)'];
 
   const csvRows = [
     `# NSAMS – National Attendance Report – ${dateStr}`,
     headers.join(','),
     ...tableData.map(row => {
-      const attended = row.present + row.absent;
-      const rate = attended > 0 ? (row.present / attended * 100).toFixed(1) : '';
+      const rate = row.totalSchools > 0
+        ? (row.schoolsReported / row.totalSchools * 100).toFixed(1)
+        : '';
       return [
         `"${row.governorate}"`,
-        row.schoolCount,
-        row.totalStudents,
-        row.present,
-        row.absent,
-        rate
+        row.totalSchools,
+        row.studentsPresent,
+        row.schoolsReported,
+        Math.max(0, row.totalSchools - row.schoolsReported),
+        rate,
       ].join(',');
-    })
+    }),
   ];
 
-  // Totals row
-  let tStudents = 0, tPresent = 0, tAbsent = 0, tSchools = 0;
+  // سطر المجاميع
+  let tSchools = 0, tStudents = 0, tReported = 0;
   tableData.forEach(r => {
-    tStudents += r.totalStudents;
-    tPresent  += r.present;
-    tAbsent   += r.absent;
-    tSchools  += r.schoolCount;
+    tSchools   += r.totalSchools;
+    tStudents  += r.studentsPresent;
+    tReported  += r.schoolsReported;
   });
-  const tAttended = tPresent + tAbsent;
-  const tRate = tAttended > 0 ? (tPresent / tAttended * 100).toFixed(1) : '';
-  csvRows.push(['"National Total"', tSchools, tStudents, tPresent, tAbsent, tRate].join(','));
+  const tRate = tSchools > 0 ? (tReported / tSchools * 100).toFixed(1) : '';
+  csvRows.push([
+    '"National Total"', tSchools, tStudents, tReported,
+    Math.max(0, tSchools - tReported), tRate,
+  ].join(','));
 
   const blob = new Blob([csvRows.join('\n')], { type: 'text/csv;charset=utf-8;' });
   const url  = URL.createObjectURL(blob);
