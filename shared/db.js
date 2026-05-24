@@ -112,7 +112,7 @@ async function getSchoolStatus(schoolId, date) {
 }
 
 async function getSchoolById(schoolId) {
-  const { data, error } = await supabase
+  const { data, error } = await db
     .from('schools')
     .select('id, name, total_teachers, total_students, directorate_id')
     .eq('id', schoolId)
