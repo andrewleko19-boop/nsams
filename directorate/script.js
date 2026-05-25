@@ -214,6 +214,8 @@ async function loadStats() {
     set('stat-teachers-val', summary.totalTeachersPresent);
     set('stat-students-val', summary.totalStudentsPresent);
     set('stat-schools-val',  summary.reportingSchoolsCount ?? 0);
+    set('stat-reports-val', summary.topPendingReports?.length ?? 0);
+    set('stat-reports-sub', 'التقارير النشطة');
   } catch (err) {
     console.error('[Stats] Failed:', err);
     showToast('Stats Error', 'Could not load summary.', 'error');
