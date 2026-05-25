@@ -294,17 +294,17 @@ input::placeholder { color: var(--text-muted); }
 }
 .stat-card:hover { border-color: var(--border-light); }
 #stat-reports {
-  background: #78350f;
-  border-color: #f59e0b;
-  border-left: 3px solid #f59e0b;
+  background: #1A2236;        /* نفس لون باقي البطاقات */
 }
+
 #stat-reports .stat-value,
 #stat-reports .stat-label,
 #stat-reports .stat-sub {
-  color: #f59e0b;
+  color: #E8EDF7;             /* نفس لون نص البطاقات الأخرى */
 }
+
 #stat-reports .stat-icon svg {
-  color: #f59e0b;
+  stroke: #F59E0B;            /* أيقونة برتقالية للتمييز */
 }
 
 .stat-icon {
