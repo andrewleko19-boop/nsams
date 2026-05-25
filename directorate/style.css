@@ -293,6 +293,19 @@ input::placeholder { color: var(--text-muted); }
   transition: border-color var(--transition);
 }
 .stat-card:hover { border-color: var(--border-light); }
+#stat-reports {
+  background: #78350f;
+  border-color: #f59e0b;
+  border-left: 3px solid #f59e0b;
+}
+#stat-reports .stat-value,
+#stat-reports .stat-label,
+#stat-reports .stat-sub {
+  color: #f59e0b;
+}
+#stat-reports .stat-icon svg {
+  color: #f59e0b;
+}
 
 .stat-icon {
   width: 48px;
