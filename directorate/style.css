@@ -294,17 +294,20 @@ input::placeholder { color: var(--text-muted); }
 }
 .stat-card:hover { border-color: var(--border-light); }
 #stat-reports {
-  background: #1A2236;        /* نفس لون باقي البطاقات */
+  background: #1A2236;
 }
 
-#stat-reports .stat-value,
+#stat-reports .stat-value {
+  color: #E8EDF7;    /* الرقم فقط باللون الأبيض */
+}
+
 #stat-reports .stat-label,
 #stat-reports .stat-sub {
-  color: #4F5F80;             /* نفس لون نص البطاقات الأخرى */
+  color: #4F5F80;    /* النص العلوي والسفلي باللون الرمادي */
 }
 
 #stat-reports .stat-icon svg {
-  stroke: #F59E0B;            /* أيقونة برتقالية للتمييز */
+  stroke: #F59E0B;
 }
 
 .stat-icon {
