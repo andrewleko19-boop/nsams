@@ -393,7 +393,8 @@ input::placeholder { color: var(--text-muted); }
 }
 .legend-dot--green  { background: var(--green); }
 .legend-dot--amber  { background: var(--amber); }
-.legend-dot--red    { background: var(--red); }
+.legend-dot--red     { background: #7f1d1d; }
+.legend-dot--no-data { background: #fca5a5; }
 
 /* ══════════════════════════════════════════════
    PENDING REPORTS LIST

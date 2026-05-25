@@ -136,7 +136,7 @@ function initMap() {
 }
 
 function makeMarkerIcon(color) {
-  const palette = { green: '#22c55e', amber: '#f59e0b', red: '#ef4444', gray: '#4f5f80' };
+  const palette = { green: '#22c55e', amber: '#f59e0b', red: '#7f1d1d', no_data: '#fca5a5', gray: '#4f5f80' };
   const fill = palette[color] || palette.gray;
   const svg = `
     <svg xmlns="http://www.w3.org/2000/svg" width="28" height="36" viewBox="0 0 28 36">
@@ -171,8 +171,8 @@ async function loadMap() {
     }
 
     for (const school of schools) {
-      const rawColor = statusMap[school.id] || 'gray';
-      const color    = rawColor === 'orange' ? 'amber' : rawColor;
+      const rawColor = statusMap[school.id] || 'no_data';
+      const color    = rawColor;
       const icon     = makeMarkerIcon(color);
       const lat      = school.lat;
       const lng      = school.lng;
@@ -213,8 +213,7 @@ async function loadStats() {
 
     set('stat-teachers-val', summary.totalTeachersPresent);
     set('stat-students-val', summary.totalStudentsPresent);
-    set('stat-reports-val',  summary.topPendingReports?.length ?? 0);
-    set('stat-reports-sub',  'active reports');
+    set('stat-schools-val',  summary.reportingSchoolsCount ?? 0);
   } catch (err) {
     console.error('[Stats] Failed:', err);
     showToast('Stats Error', 'Could not load summary.', 'error');
@@ -394,13 +393,13 @@ function capitalize(str) {
 
 function formatType(type) {
   const types = {
-    security_threat:      'Security Threat',
-    infrastructure_damage:'Infrastructure Damage',
-    health_emergency:     'Health Emergency',
-    natural_disaster:     'Natural Disaster',
-    teacher_shortage:     'Teacher Shortage',
-    other:                'Other',
-  };
+  security_threat:      'تهديد أمني',
+  infrastructure_damage:'أضرار في البنية التحتية',
+  health_emergency:     'طارئ صحي',
+  natural_disaster:     'كارثة طبيعية',
+  teacher_shortage:     'نقص في الكوادر التدريسية',
+  other:                'أخرى',
+};
   return types[type] ?? capitalize(type ?? '');
 }
 

@@ -266,6 +266,9 @@ async function getTodaySummary(directorateId) {
       id: r.id, type: r.type, status: r.status,
       createdAt: r.created_at, schoolName: r.school?.name ?? "Unknown",
     })),
+    reportingSchoolsCount: new Set(
+    (reportsRes.data || []).map(r => r.school?.name).filter(Boolean)
+    ).size,
   };
 }
 
@@ -287,7 +290,7 @@ async function getSchoolsAttendanceStatus(directorateId, date) {
   for (const school of schoolsRes.data || []) {
     result[school.id] = activeReportSet.has(school.id) ? "red"
                       : submittedSet.has(school.id)    ? "green"
-                      : "orange";
+                      : "no_data";
   }
   return result;
 }
