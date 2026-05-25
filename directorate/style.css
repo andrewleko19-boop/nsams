@@ -300,7 +300,7 @@ input::placeholder { color: var(--text-muted); }
 #stat-reports .stat-value,
 #stat-reports .stat-label,
 #stat-reports .stat-sub {
-  color: #E8EDF7;             /* نفس لون نص البطاقات الأخرى */
+  color: #4F5F80;             /* نفس لون نص البطاقات الأخرى */
 }
 
 #stat-reports .stat-icon svg {
