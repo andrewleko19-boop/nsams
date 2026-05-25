@@ -308,6 +308,7 @@ input::placeholder { color: var(--text-muted); }
 .stat-icon--green  { background: var(--green-dim);  color: var(--green); }
 .stat-icon--amber  { background: var(--amber-dim);  color: var(--amber); }
 .stat-icon--purple { background: var(--purple-dim); color: var(--purple); }
+.stat-icon--red   { background: var(--red-dim);   color: var(--red); }
 
 .stat-body { display: flex; flex-direction: column; min-width: 0; }
 .stat-label { font-size: 0.75rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; }
