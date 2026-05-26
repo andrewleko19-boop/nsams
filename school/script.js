@@ -743,13 +743,6 @@ async function loadClassSummaries() {
   }
 }
 
-// ── Build one class row ───────────────────────────────────────────────────────
-function escapeHtml(str) {
-  return String(str)
-    .replace(/&/g, '&amp;').replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-}
-
 function buildClassRow(s) {
   const sub    = s.submission;
   const status = sub?.status ?? 'none';
