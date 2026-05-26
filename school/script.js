@@ -63,6 +63,25 @@ function normaliseSchool(row) {
   };
 }
 
+// 1. جلب ملخص الصفوف اليومي
+async function loadClassSummary() {
+  const { getSchoolDailySummary } = window.NSAMS_DB;
+  const summaries = await getSchoolDailySummary(S.school.id, todayISO());
+
+  // حسب الإجمالي تلقائياً من بيانات المعلمين
+  const totalStudentsPresent = summaries.reduce(
+    (acc, c) => acc + (c.stats.present + c.stats.late), 0
+  );
+  const totalStudentsAbsent = summaries.reduce(
+    (acc, c) => acc + (c.stats.absent + c.stats.excused), 0
+  );
+
+  // اعرضها في الـ UI بدلاً من الإدخال اليدوي
+  inStuPresent.value = totalStudentsPresent;
+  inStuAbsent.value  = totalStudentsAbsent;
+
+  renderClassSummaryTable(summaries);
+}
 /**
  * Fetch school from Supabase, fall back to localStorage cache when offline.
  * Sets S.school and updates the cache on success.
