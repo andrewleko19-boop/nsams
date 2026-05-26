@@ -699,6 +699,9 @@ const btnConfirmReject   = el('btn-confirm-reject');
 const rejectBtnLabel     = el('reject-btn-label');
 const rejectSpinner      = el('reject-spinner');
 
+// Ensure reject modal is hidden on page load
+hide(modalReject);
+
 // ── State ─────────────────────────────────────────────────────────────────────
 let _rejectSubmissionId = null;
 let _classBusy          = false;
@@ -815,6 +818,10 @@ async function handleConfirm(btn) {
 
 // ── Reject modal ──────────────────────────────────────────────────────────────
 function openRejectModal(sid, cname) {
+  if (!sid) {  // ← أضف هذا الفحص
+    console.error('[NSAMS] openRejectModal: invalid submission ID', sid);
+    return;
+  }
   _rejectSubmissionId       = sid;
   rejectClassName.textContent = cname;
   rejectNotes.value         = '';
@@ -834,6 +841,11 @@ btnCloseReject.addEventListener('click', closeRejectModal);
 modalReject.addEventListener('click', (e) => { if (e.target === modalReject) closeRejectModal(); });
 
 btnConfirmReject.addEventListener('click', async () => {
+  if (!_rejectSubmissionId) {  // ← فحص
+    rejectError.textContent = 'خطأ: معرّف الكشف غير صحيح';
+    show(rejectError);
+    return;
+  }
   const notes = rejectNotes.value.trim();
   if (!notes) {
     rejectError.textContent = 'يرجى كتابة سبب الإعادة';
