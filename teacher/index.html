@@ -1,0 +1,396 @@
+<!-- teacher/index.html -->
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#0B2B5E" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <title>NSAMS – معلم الصف</title>
+  <link rel="stylesheet" href="./style.css" />
+</head>
+<body>
+
+<!-- ═══ SVG Sprite ═══════════════════════════════════════════════════════════ -->
+<svg xmlns="http://www.w3.org/2000/svg" style="display:none" aria-hidden="true">
+  <symbol id="ic-user"      viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
+  </symbol>
+  <symbol id="ic-lock"      viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+  </symbol>
+  <symbol id="ic-eye"       viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
+  </symbol>
+  <symbol id="ic-eye-off"   viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/>
+    <line x1="1" y1="1" x2="23" y2="23"/>
+  </symbol>
+  <symbol id="ic-check"     viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <polyline points="20 6 9 17 4 12"/>
+  </symbol>
+  <symbol id="ic-check-circle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>
+  </symbol>
+  <symbol id="ic-x"         viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+  </symbol>
+  <symbol id="ic-x-circle"  viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="12" cy="12" r="10"/>
+    <line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/>
+  </symbol>
+  <symbol id="ic-alert"     viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+    <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+  </symbol>
+  <symbol id="ic-alert-circle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="12" cy="12" r="10"/>
+    <line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+  </symbol>
+  <symbol id="ic-wifi"      viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M5 12.55a11 11 0 0 1 14.08 0"/>
+    <path d="M1.42 9a16 16 0 0 1 21.16 0"/>
+    <path d="M8.53 16.11a6 6 0 0 1 6.95 0"/>
+    <line x1="12" y1="20" x2="12.01" y2="20"/>
+  </symbol>
+  <symbol id="ic-wifi-off"  viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <line x1="1" y1="1" x2="23" y2="23"/>
+    <path d="M16.72 11.06A10.94 10.94 0 0 1 19 12.55"/>
+    <path d="M5 12.55a10.94 10.94 0 0 1 5.17-2.39"/>
+    <path d="M10.71 5.05A16 16 0 0 1 22.56 9"/>
+    <path d="M1.42 9a15.91 15.91 0 0 1 4.7-2.88"/>
+    <path d="M8.53 16.11a6 6 0 0 1 6.95 0"/>
+    <line x1="12" y1="20" x2="12.01" y2="20"/>
+  </symbol>
+  <symbol id="ic-refresh"   viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/>
+    <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+  </symbol>
+  <symbol id="ic-logout"    viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+    <polyline points="16 17 21 12 16 7"/>
+    <line x1="21" y1="12" x2="9" y2="12"/>
+  </symbol>
+  <symbol id="ic-arrow-right" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <line x1="5" y1="12" x2="19" y2="12"/>
+    <polyline points="12 5 19 12 12 19"/>
+  </symbol>
+  <symbol id="ic-send"      viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <line x1="22" y1="2" x2="11" y2="13"/>
+    <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+  </symbol>
+  <symbol id="ic-users"     viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+    <circle cx="9" cy="7" r="4"/>
+    <path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+  </symbol>
+  <symbol id="ic-clipboard" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/>
+    <rect x="8" y="2" width="8" height="4" rx="1"/>
+  </symbol>
+  <symbol id="ic-message-square" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+  </symbol>
+</svg>
+
+<!-- ═══════════════════════════════════════════════════════════════════════════
+     SCREEN: Login
+════════════════════════════════════════════════════════════════════════════ -->
+<div id="screen-login" class="screen">
+  <div class="login-bg">
+    <div class="login-pattern" aria-hidden="true"></div>
+
+    <div class="login-card">
+      <div class="login-logo">
+        <div class="login-logo-icon">
+          <svg class="icon icon-lg"><use href="#ic-clipboard"/></svg>
+        </div>
+        <div>
+          <div class="login-logo-title">نظام رصد الدوام المدرسي</div>
+          <div class="login-logo-sub">NSAMS – وزارة التربية السورية</div>
+        </div>
+      </div>
+
+      <!-- Role badge -->
+      <div style="text-align:center; margin-bottom:20px;">
+        <span class="login-role-badge">
+          <svg class="icon icon-xs"><use href="#ic-users"/></svg>
+          بوابة معلم الصف
+        </span>
+      </div>
+
+      <div id="login-error" class="form-error" hidden></div>
+
+      <form id="form-login" novalidate>
+        <div class="form-group">
+          <label class="form-label" for="in-email">البريد الإلكتروني</label>
+          <div class="input-wrap">
+            <input id="in-email" class="form-input" type="email"
+                   placeholder="teacher@school.edu.sy"
+                   autocomplete="username" inputmode="email" required />
+            <svg class="icon icon-sm input-icon"><use href="#ic-user"/></svg>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="in-password">كلمة المرور</label>
+          <div class="input-wrap">
+            <input id="in-password" class="form-input" type="password"
+                   placeholder="••••••••"
+                   autocomplete="current-password" required />
+            <button type="button" class="pw-toggle" id="btn-toggle-pw"
+                    aria-label="إظهار كلمة المرور">
+              <svg class="icon icon-sm"><use id="pw-eye-use" href="#ic-eye"/></svg>
+            </button>
+          </div>
+        </div>
+
+        <button type="submit" id="btn-login" class="btn btn-primary btn-full" style="margin-top:4px">
+          <span id="btn-login-label">تسجيل الدخول</span>
+          <span class="spinner" id="login-spinner" hidden></span>
+        </button>
+      </form>
+    </div>
+  </div>
+</div><!-- /screen-login -->
+
+<!-- ═══════════════════════════════════════════════════════════════════════════
+     SCREEN: App
+     Two sub-views: home (class list) and attendance (student list)
+     Toggled by show/hide via JS, not separate screens, to preserve state.
+════════════════════════════════════════════════════════════════════════════ -->
+<div id="screen-app" class="screen" hidden>
+
+  <!-- ── Global Header (home view) ─────────────────────────────────────────── -->
+  <header id="hdr-home" class="app-header">
+    <div class="hdr-info">
+      <div id="hdr-teacher-name" class="hdr-school-name">…</div>
+      <div id="hdr-date"         class="hdr-date">…</div>
+    </div>
+    <div class="hdr-actions">
+      <!-- Connectivity pill -->
+      <div id="conn-pill" class="conn-pill" aria-live="polite">
+        <svg class="icon icon-xs"><use id="conn-icon" href="#ic-wifi"/></svg>
+        <span id="conn-label">متصل</span>
+      </div>
+      <!-- Manual sync -->
+      <button id="btn-sync" class="hdr-icon-btn" aria-label="مزامنة">
+        <svg class="icon icon-sm"><use id="sync-icon" href="#ic-refresh"/></svg>
+      </button>
+      <!-- Logout -->
+      <button id="btn-logout" class="hdr-icon-btn" aria-label="تسجيل الخروج">
+        <svg class="icon icon-sm"><use href="#ic-logout"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- Pending sync bar -->
+  <div id="pending-bar" class="pending-bar" hidden aria-live="polite">
+    <span>
+      <svg class="icon icon-sm" style="color:var(--clr-warning)"><use href="#ic-alert"/></svg>
+      <span id="pending-text">سجلات في انتظار المزامنة</span>
+    </span>
+    <button class="btn btn-ghost" style="padding:4px 12px; font-size:.8rem;" id="btn-sync-bar">
+      مزامنة الآن
+    </button>
+  </div>
+
+  <!-- ── Home View: Class List ─────────────────────────────────────────────── -->
+  <div id="view-home">
+    <div class="page-body">
+      <p class="section-title">صفوفي اليوم</p>
+
+      <!-- Loading skeletons -->
+      <div id="classes-loading">
+        <div style="background:#fff;border-radius:12px;padding:16px;margin-bottom:10px;display:flex;align-items:center;gap:14px;border:1.5px solid #E2E8F0">
+          <div class="stu-skeleton" style="width:46px;height:46px;border-radius:8px"></div>
+          <div style="flex:1">
+            <div class="stu-skeleton" style="height:16px;width:60%;margin-bottom:8px"></div>
+            <div class="stu-skeleton" style="height:12px;width:40%"></div>
+          </div>
+        </div>
+        <div style="background:#fff;border-radius:12px;padding:16px;margin-bottom:10px;display:flex;align-items:center;gap:14px;border:1.5px solid #E2E8F0">
+          <div class="stu-skeleton" style="width:46px;height:46px;border-radius:8px"></div>
+          <div style="flex:1">
+            <div class="stu-skeleton" style="height:16px;width:55%;margin-bottom:8px"></div>
+            <div class="stu-skeleton" style="height:12px;width:35%"></div>
+          </div>
+        </div>
+      </div>
+
+      <div id="classes-list" hidden></div>
+
+      <div id="classes-empty" class="classes-empty" hidden>
+        <svg class="icon icon-2xl"><use href="#ic-users"/></svg>
+        <p>لا توجد صفوف مسندة إليك في السنة الدراسية الحالية.</p>
+        <p style="margin-top:6px;font-size:.8rem">تواصل مع مدير المدرسة لإضافة صفك.</p>
+      </div>
+    </div>
+  </div><!-- /view-home -->
+
+  <!-- ── Attendance View: Students ─────────────────────────────────────────── -->
+  <div id="view-att" hidden>
+
+    <!-- Attendance screen header -->
+    <header class="att-screen-header">
+      <button id="btn-back" class="btn-back" aria-label="العودة">
+        <svg class="icon icon-sm"><use href="#ic-arrow-right"/></svg>
+        العودة
+      </button>
+      <div class="att-hdr-info">
+        <div id="att-class-name" class="att-hdr-name">…</div>
+        <div id="att-date"       class="att-hdr-date">…</div>
+      </div>
+    </header>
+
+    <!-- Summary bar -->
+    <div class="att-summary-bar" role="status" aria-live="polite" aria-atomic="true">
+      <div class="sum-item sum-present">
+        <span id="sum-present" class="sum-value">0</span>
+        <span class="sum-label">حاضر</span>
+      </div>
+      <div class="sum-item sum-late">
+        <span id="sum-late"    class="sum-value">0</span>
+        <span class="sum-label">متأخر</span>
+      </div>
+      <div class="sum-item sum-absent">
+        <span id="sum-absent"  class="sum-value">0</span>
+        <span class="sum-label">غائب</span>
+      </div>
+      <div class="sum-item sum-excused">
+        <span id="sum-excused" class="sum-value">0</span>
+        <span class="sum-label">بعذر</span>
+      </div>
+    </div>
+
+    <!-- Submitted banner -->
+    <div id="submitted-banner" class="submitted-banner" hidden>
+      <svg class="icon icon-sm"><use href="#ic-check-circle"/></svg>
+      <span id="submitted-banner-text">تم إرسال كشف الحضور بنجاح</span>
+    </div>
+
+    <!-- Rejected banner -->
+    <div id="rejected-banner" class="rejected-banner" hidden>
+      <strong>أُعيد الكشف من المدير:</strong>
+      <span id="rejected-reason"> يرجى المراجعة والإرسال مجدداً.</span>
+    </div>
+
+    <!-- Students list -->
+    <div id="students-loading" style="padding:16px var(--page-px,16px)">
+      <div style="background:#fff;border-radius:12px;overflow:hidden;border:1.5px solid #E2E8F0">
+        <div style="padding:16px 14px;border-bottom:1px solid #E2E8F0;display:flex;align-items:center;gap:12px">
+          <div class="stu-skeleton" style="width:26px;height:14px"></div>
+          <div style="flex:1"><div class="stu-skeleton" style="height:14px;width:70%"></div></div>
+          <div class="stu-skeleton" style="width:120px;height:32px;border-radius:8px"></div>
+        </div>
+        <div style="padding:16px 14px;border-bottom:1px solid #E2E8F0;display:flex;align-items:center;gap:12px">
+          <div class="stu-skeleton" style="width:26px;height:14px"></div>
+          <div style="flex:1"><div class="stu-skeleton" style="height:14px;width:60%"></div></div>
+          <div class="stu-skeleton" style="width:120px;height:32px;border-radius:8px"></div>
+        </div>
+        <div style="padding:16px 14px;display:flex;align-items:center;gap:12px">
+          <div class="stu-skeleton" style="width:26px;height:14px"></div>
+          <div style="flex:1"><div class="stu-skeleton" style="height:14px;width:65%"></div></div>
+          <div class="stu-skeleton" style="width:120px;height:32px;border-radius:8px"></div>
+        </div>
+      </div>
+    </div>
+
+    <ul id="students-list" class="students-list" hidden role="list" aria-label="قائمة الطلاب"></ul>
+
+    <div id="students-empty" hidden style="text-align:center;padding:48px 24px;color:var(--clr-text-3)">
+      <svg class="icon icon-2xl" style="color:var(--clr-border);margin-bottom:12px"><use href="#ic-users"/></svg>
+      <p>لا يوجد طلاب في هذا الصف.</p>
+    </div>
+
+    <!-- Bottom spacer so footer doesn't cover last row -->
+    <div style="height:90px"></div>
+
+    <!-- Footer action bar (hidden when confirmed) -->
+    <div id="att-footer" class="att-footer">
+      <div class="att-footer-inner">
+        <button id="btn-save-draft" class="btn btn-ghost" style="flex:0 0 auto;min-width:90px" hidden>
+          <svg class="icon icon-sm"><use href="#ic-clipboard"/></svg>
+          حفظ مؤقت
+        </button>
+        <button id="btn-submit-att" class="btn btn-primary" style="flex:1">
+          <svg class="icon icon-sm"><use href="#ic-send"/></svg>
+          <span id="btn-submit-label">إرسال للمدير</span>
+          <span class="spinner" id="submit-spinner" hidden></span>
+        </button>
+      </div>
+    </div>
+
+  </div><!-- /view-att -->
+
+</div><!-- /screen-app -->
+
+<!-- ═══ Reason Modal ══════════════════════════════════════════════════════════ -->
+<div id="modal-reason" class="overlay" hidden aria-modal="true" role="dialog"
+     aria-labelledby="reason-title">
+  <div class="reason-sheet">
+    <h3 id="reason-title">سبب الغياب / الملاحظة</h3>
+    <div id="reason-student-name" class="student-being-edited">…</div>
+    <textarea id="reason-input" class="reason-textarea"
+              placeholder="مثال: غائب بسبب المرض (إفادة طبية)" maxlength="300"></textarea>
+    <div class="reason-actions">
+      <button id="btn-reason-cancel" class="btn btn-ghost">إلغاء</button>
+      <button id="btn-reason-save"   class="btn btn-primary">حفظ</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ Confirm Submit Modal ══════════════════════════════════════════════════ -->
+<div id="modal-confirm" class="overlay" hidden aria-modal="true" role="dialog"
+     aria-labelledby="confirm-title">
+  <div class="confirm-sheet">
+    <h3 id="confirm-title">تأكيد إرسال الكشف</h3>
+    <p>سيُرسل الكشف للمدير ولن تتمكن من التعديل بعد التأكيد منه.</p>
+
+    <div class="confirm-stats">
+      <div class="cstat c-present">
+        <div id="c-present" class="cstat-val">0</div>
+        <div class="cstat-lbl">حاضر</div>
+      </div>
+      <div class="cstat c-absent">
+        <div id="c-absent" class="cstat-val">0</div>
+        <div class="cstat-lbl">غائب</div>
+      </div>
+      <div class="cstat c-late">
+        <div id="c-late" class="cstat-val">0</div>
+        <div class="cstat-lbl">متأخر</div>
+      </div>
+      <div class="cstat c-excused">
+        <div id="c-excused" class="cstat-val">0</div>
+        <div class="cstat-lbl">بعذر</div>
+      </div>
+    </div>
+
+    <div id="confirm-warning" style="display:none;margin-bottom:14px;
+         padding:10px 14px;background:var(--clr-warning-bg);
+         border:1px solid var(--clr-warning-brd);border-radius:8px;
+         font-size:.85rem;color:#92400E">
+      <svg class="icon icon-xs" style="color:var(--clr-warning)"><use href="#ic-alert"/></svg>
+      <span id="confirm-warning-text"></span>
+    </div>
+
+    <div class="confirm-actions">
+      <button id="btn-confirm-cancel" class="btn btn-ghost">مراجعة</button>
+      <button id="btn-confirm-submit" class="btn btn-primary">
+        <svg class="icon icon-sm"><use href="#ic-send"/></svg>
+        <span id="confirm-submit-label">إرسال</span>
+        <span class="spinner" id="confirm-spinner" hidden></span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast zone -->
+<div id="toasts" class="toast-zone" aria-live="polite" aria-atomic="false"></div>
+
+<!-- Load order: Supabase → shared DB → this module -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script type="module" src="../shared/db.js"></script>
+<script type="module" src="./script.js"></script>
+</body>
+</html>
