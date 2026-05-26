@@ -542,3 +542,12 @@ ul { list-style: none; }
 .visually-hidden {
   position: absolute; width:1px; height:1px; overflow:hidden; clip:rect(0,0,0,0);
 }
+
+@media print {
+  .app-header,
+  .att-footer,
+  .stn-btns,
+  .btn-print-trigger { display: none !important; }
+  .student-row       { break-inside: avoid; }
+  body               { direction: rtl; font-size: 12pt; }
+}

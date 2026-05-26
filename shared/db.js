@@ -1,12 +1,9 @@
-// ─── FIX #1: استيراد Supabase SDK الصحيح بدلاً من `const { createClient } = supabase` ───
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-const SUPABASE_URL     = "https://xocrzpjfvizgnsybegwr.supabase.co";
+const SUPABASE_URL      = "https://xocrzpjfvizgnsybegwr.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_HCVzNgEJmov38FWXRO1uFw_DG1d87Y4";
 
 const db = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
-// ─── FIX #2: تصدير db كـ supabase حتى يعمل import { supabase } from '../shared/db.js' ───
 export { db as supabase };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -14,6 +11,7 @@ export { db as supabase };
 // ─────────────────────────────────────────────────────────────────────────────
 const QUEUE_ATTENDANCE = "nsams_pending_attendance";
 const QUEUE_REPORTS    = "nsams_pending_reports";
+const QUEUE_STU_ATT    = 'nsams_pending_stu_att';
 
 function readQueue(key) {
   try { return JSON.parse(localStorage.getItem(key) || "[]"); }
@@ -117,7 +115,6 @@ async function getSchoolById(schoolId) {
     .select('id, name, total_teachers, total_students, directorate_id')
     .eq('id', schoolId)
     .single();
- 
   if (error) throw error;
   return data;
 }
@@ -134,7 +131,7 @@ async function syncAttendanceRecord(record) {
 }
 
 async function saveAttendance(record) {
-  const localId = generateLocalId();
+  const localId  = generateLocalId();
   const enriched = { ...record, localId, synced: false, createdAt: new Date().toISOString() };
 
   if (!isOnline()) {
@@ -179,7 +176,7 @@ async function syncReportRecord(report) {
 }
 
 async function submitReport(report) {
-  const localId = generateLocalId();
+  const localId       = generateLocalId();
   const receiptNumber = generateReceiptNumber();
   const enriched = {
     ...report, localId, receiptNumber,
@@ -267,13 +264,13 @@ async function getTodaySummary(directorateId) {
       createdAt: r.created_at, schoolName: r.school?.name ?? "Unknown",
     })),
     reportingSchoolsCount: new Set(
-    (reportsRes.data || []).map(r => r.school?.name).filter(Boolean)
+      (reportsRes.data || []).map(r => r.school?.name).filter(Boolean)
     ).size,
   };
 }
 
 async function getSchoolsAttendanceStatus(directorateId, date) {
-  const isoDate = date instanceof Date ? date.toISOString().slice(0, 10) : date;
+  const isoDate  = date instanceof Date ? date.toISOString().slice(0, 10) : date;
   const schoolsRes = await db.from("schools").select("id").eq("directorate_id", directorateId);
   if (schoolsRes.error) throw schoolsRes.error;
 
@@ -295,27 +292,17 @@ async function getSchoolsAttendanceStatus(directorateId, date) {
   return result;
 }
 
-// ─── Ministry Functions ───────────────────────────────────────────────────────
-// تعمل مع الـ schema الفعلي: daily_attendance(school_id, date, students_present, teachers_present)
-// ملاحظة: إذا كان في جدولك عمود students_absent أو students_total، يمكن إضافته هنا.
-
-/**
- * جلب ملخص الحضور الوطني مجمعاً حسب المحافظة.
- * يعيد مصفوفة من { governorate, present, schoolsReported, totalSchools, dirCount }
- */
+// ─── Ministry ─────────────────────────────────────────────────────────────────
 async function getMinistryAttendanceSummary(date) {
   const isoDate = date instanceof Date ? date.toISOString().slice(0, 10) : date;
 
-  // 1. جلب جميع المديريات مع المحافظة
   const { data: directorates, error: dirErr } = await db
     .from("directorates")
     .select("id, name, governorate")
     .order("governorate");
   if (dirErr) throw dirErr;
-
   if (!directorates || directorates.length === 0) return [];
 
-  // 2. جلب جميع المدارس مع معرف المديرية
   const { data: schools, error: schErr } = await db
     .from("schools")
     .select("id, directorate_id");
@@ -323,7 +310,6 @@ async function getMinistryAttendanceSummary(date) {
 
   const allSchoolIds = (schools || []).map(s => s.id);
 
-  // 3. جلب سجلات الحضور اليومية (مجمعة لكل مدرسة)
   const { data: attendance, error: attErr } = await db
     .from("daily_attendance")
     .select("school_id, students_present, teachers_present")
@@ -331,7 +317,6 @@ async function getMinistryAttendanceSummary(date) {
     .in("school_id", allSchoolIds.length > 0 ? allSchoolIds : ["__none__"]);
   if (attErr) throw attErr;
 
-  // بناء خرائط البحث
   const schoolToDir  = {};
   const dirToSchools = {};
   for (const s of schools || []) {
@@ -340,14 +325,13 @@ async function getMinistryAttendanceSummary(date) {
     dirToSchools[s.directorate_id].add(s.id);
   }
 
-  // تجميع حسب المديرية
   const dirAgg = {};
   for (const d of directorates) {
     dirAgg[d.id] = {
-      studentsPresent:  0,
-      teachersPresent:  0,
-      schoolsReported:  0,
-      totalSchools:     dirToSchools[d.id]?.size || 0,
+      studentsPresent: 0,
+      teachersPresent: 0,
+      schoolsReported: 0,
+      totalSchools:    dirToSchools[d.id]?.size || 0,
     };
   }
   for (const rec of attendance || []) {
@@ -359,7 +343,6 @@ async function getMinistryAttendanceSummary(date) {
     }
   }
 
-  // تجميع حسب المحافظة
   const govMap = {};
   for (const d of directorates) {
     const gov = d.governorate || "Unknown";
@@ -384,7 +367,6 @@ async function getMinistryAttendanceSummary(date) {
   return Object.values(govMap).sort((a, b) => a.governorate.localeCompare(b.governorate));
 }
 
-/** جلب عدد المحافظات الفريدة */
 async function getGovernoratesCount() {
   const { data, error } = await db
     .from("directorates")
@@ -394,33 +376,422 @@ async function getGovernoratesCount() {
   return unique.size;
 }
 
+// ─── Academic year helper ─────────────────────────────────────────────────────
+// Mirrors get_academic_year() SQL function.
+// Rule: month >= 9 → current-next, else prev-current
+function getAcademicYear(date = new Date()) {
+  const month = date.getMonth() + 1;
+  const year  = date.getFullYear();
+  return month >= 9 ? `${year}-${year + 1}` : `${year - 1}-${year}`;
+}
+
+// ─── Arabic grade name ────────────────────────────────────────────────────────
+const GRADE_NAMES_AR = {
+  1: 'الأول',    2: 'الثاني',    3: 'الثالث',
+  4: 'الرابع',   5: 'الخامس',    6: 'السادس',
+  7: 'السابع',   8: 'الثامن',    9: 'التاسع',
+  10: 'العاشر',  11: 'الحادي عشر', 12: 'الثاني عشر',
+};
+function gradeNameAr(grade) {
+  return GRADE_NAMES_AR[grade] ?? grade.toString();
+}
+
+// ─── Teacher: get assigned classes ───────────────────────────────────────────
+async function getTeacherClasses(teacherId) {
+  const academicYear = getAcademicYear();
+
+  const { data, error } = await db
+    .from('class_teacher')
+    .select(`
+      class_id,
+      classes:class_id (
+        id, grade, section, school_id,
+        schools:school_id ( name )
+      )
+    `)
+    .eq('teacher_id',    teacherId)
+    .eq('academic_year', academicYear);
+
+  if (error) throw error;
+
+  return (data || []).map(row => {
+    const c = row.classes;
+    return {
+      id:          c.id,
+      grade:       c.grade,
+      section:     c.section,
+      schoolId:    c.school_id,
+      schoolName:  c.schools?.name ?? '',
+      academicYear,
+      displayName: `الصف ${gradeNameAr(c.grade)} / شعبة ${c.section}`,
+    };
+  });
+}
+
+// ─── Student cache (24-hour TTL) ─────────────────────────────────────────────
+const STUDENTS_CACHE_PFX = 'nsams_stu_';
+const STUDENTS_CACHE_TTL = 24 * 60 * 60 * 1000;
+
+function getCachedStudents(classId) {
+  try {
+    const raw = localStorage.getItem(STUDENTS_CACHE_PFX + classId);
+    if (!raw) return null;
+    const { ts, data } = JSON.parse(raw);
+    return (Date.now() - ts < STUDENTS_CACHE_TTL) ? data : null;
+  } catch { return null; }
+}
+
+function setCachedStudents(classId, data) {
+  try {
+    localStorage.setItem(
+      STUDENTS_CACHE_PFX + classId,
+      JSON.stringify({ ts: Date.now(), data })
+    );
+  } catch { /* storage quota — non-fatal */ }
+}
+
+// ─── Teacher: get students for a class ───────────────────────────────────────
+async function getClassStudents(classId) {
+  if (!isOnline()) {
+    const cached = getCachedStudents(classId);
+    if (cached) return cached;
+    throw new Error('لا يوجد اتصال ولا توجد بيانات محفوظة لهذا الصف');
+  }
+
+  const { data, error } = await db
+    .from('students')
+    .select('id, full_name, national_id, gender, seat_number')
+    .eq('class_id',  classId)
+    .eq('is_active', true)
+    .order('seat_number', { ascending: true,  nullsFirst: false })
+    .order('full_name',   { ascending: true });
+
+  if (error) throw error;
+
+  const students = data ?? [];
+  setCachedStudents(classId, students);
+  return students;
+}
+
+// ─── Teacher: check submission status for a class + date ─────────────────────
+async function getClassSubmissionStatus(classId, date) {
+  const isoDate = date instanceof Date ? date.toISOString().slice(0, 10) : date;
+
+  const { data, error } = await db
+    .from('attendance_submissions')
+    .select('id, status, submitted_at, confirmed_by, confirmed_at, notes')
+    .eq('class_id', classId)
+    .eq('date',     isoDate)
+    .maybeSingle();
+
+  if (error) throw error;
+  return data; // null = not yet submitted
+}
+
+// ─── Teacher: load existing attendance records for a class + date ─────────────
+// Returns an object: { [student_id]: { status, reason } }
+async function getClassAttendanceForDate(classId, date) {
+  const isoDate = date instanceof Date ? date.toISOString().slice(0, 10) : date;
+
+  const { data, error } = await db
+    .from('daily_student_attendance')
+    .select('student_id, status, reason')
+    .eq('class_id', classId)
+    .eq('date',     isoDate);
+
+  if (error) throw error;
+
+  const map = {};
+  for (const row of data ?? []) {
+    map[row.student_id] = { status: row.status, reason: row.reason ?? null };
+  }
+  return map;
+}
+
+// ─── Teacher: get attendance report for printing ──────────────────────────────
+async function getClassAttendanceReport(classId, date) {
+  const isoDate = date instanceof Date ? date.toISOString().slice(0, 10) : date;
+
+  const { data, error } = await db
+    .from('daily_student_attendance')
+    .select(`
+      status, reason,
+      students:student_id ( full_name, seat_number )
+    `)
+    .eq('class_id', classId)
+    .eq('date',     isoDate)
+    // وبدلاً منه رتّب النتيجة في JS بعد الجلب:
+    return (data ?? []).sort
+    (
+     (a, b) =>
+     (a.students?.seat_number ?? 999) - (b.students?.seat_number ?? 999)
+    );
+}
+
+// ─── Student attendance offline queue ────────────────────────────────────────
+function getPendingStudentAttendance() {
+  return readQueue(QUEUE_STU_ATT).filter(r => !r.synced);
+}
+
+function markStudentAttSynced(localId) {
+  const queue = readQueue(QUEUE_STU_ATT).map(r =>
+    r.localId === localId ? { ...r, synced: true } : r
+  );
+  writeQueue(QUEUE_STU_ATT, queue);
+}
+
+// Core sync function – called both directly (online path) and by syncPendingV2.
+async function syncStudentAttendanceRecord(payload) {
+  const { records, classId, schoolId, date, teacherId } = payload;
+
+  const rows = records.map(r => ({
+    student_id:  r.studentId,
+    class_id:    classId,
+    school_id:   schoolId,
+    date,
+    status:      r.status,
+    reason:      r.reason ?? null,
+    recorded_by: teacherId,
+  }));
+
+  const { error: attErr } = await db
+    .from('daily_student_attendance')
+    .upsert(rows, { onConflict: 'student_id,date', ignoreDuplicates: false });
+
+  if (attErr) throw attErr;
+
+  const { error: subErr } = await db
+    .from('attendance_submissions')
+    .upsert(
+      {
+        class_id:     classId,
+        school_id:    schoolId,
+        date,
+        submitted_by: teacherId,
+        submitted_at: new Date().toISOString(),
+        status:       'pending',
+      },
+      { onConflict: 'class_id,date', ignoreDuplicates: false }
+    );
+
+  if (subErr) throw subErr;
+  return true;
+}
+
+async function saveStudentAttendance({ records, classId, schoolId, date, teacherId }) {
+  const localId = generateLocalId();
+  const payload = {
+    localId, records, classId, schoolId, date, teacherId,
+    synced: false, createdAt: new Date().toISOString(),
+  };
+
+  if (!isOnline()) {
+    const queue = readQueue(QUEUE_STU_ATT);
+    queue.push(payload);
+    writeQueue(QUEUE_STU_ATT, queue);
+    return { success: true, localId, synced: false };
+  }
+
+  try {
+    await syncStudentAttendanceRecord(payload);
+    return { success: true, localId, synced: true };
+  } catch (err) {
+    const queue = readQueue(QUEUE_STU_ATT);
+    queue.push(payload);
+    writeQueue(QUEUE_STU_ATT, queue);
+    console.warn('[NSAMS] saveStudentAttendance: falling back to queue', err);
+    return { success: true, localId, synced: false };
+  }
+}
+
+// ─── School admin: daily summary per class ───────────────────────────────────
+async function getSchoolDailySummary(schoolId, date) {
+  const isoDate      = date instanceof Date ? date.toISOString().slice(0, 10) : date;
+  const academicYear = getAcademicYear(new Date(isoDate));
+
+  const { data: classRows, error: classErr } = await db
+    .from('classes')
+    .select(`
+      id, grade, section,
+      class_teacher!left (
+        teacher_id,
+        users:teacher_id ( full_name )
+      )
+    `)
+    .eq('school_id',    schoolId)
+    .eq('academic_year', academicYear);
+
+  if (classErr) throw classErr;
+
+  const classIds = (classRows ?? []).map(c => c.id);
+  if (classIds.length === 0) return [];
+
+  const [subRes, attRes, stuRes] = await Promise.all([
+    db.from('attendance_submissions')
+      .select('class_id, status, submitted_at, confirmed_at')
+      .eq('school_id', schoolId)
+      .eq('date',      isoDate)
+      .in('class_id',  classIds),
+
+    db.from('daily_student_attendance')
+      .select('class_id, status')
+      .eq('school_id', schoolId)
+      .eq('date',      isoDate)
+      .in('class_id',  classIds),
+
+    db.from('students')
+      .select('class_id')
+      .eq('school_id', schoolId)
+      .eq('is_active', true)
+      .in('class_id',  classIds),
+  ]);
+
+  if (subRes.error) throw subRes.error;
+  if (attRes.error) throw attRes.error;
+  if (stuRes.error) throw stuRes.error;
+
+  const subMap = {};
+  for (const s of subRes.data ?? []) subMap[s.class_id] = s;
+
+  const attMap = {};
+  for (const a of attRes.data ?? []) {
+    if (!attMap[a.class_id]) {
+      attMap[a.class_id] = { present: 0, absent: 0, late: 0, excused: 0 };
+    }
+    attMap[a.class_id][a.status]++;
+  }
+
+  const stuCount = {};
+  for (const s of stuRes.data ?? []) {
+    stuCount[s.class_id] = (stuCount[s.class_id] ?? 0) + 1;
+  }
+
+  return (classRows ?? []).map(c => {
+    const ct = c.class_teacher?.[0];
+    return {
+      classId:       c.id,
+      displayName:   `الصف ${gradeNameAr(c.grade)} / شعبة ${c.section}`,
+      grade:         c.grade,
+      section:       c.section,
+      teacherName:   ct?.users?.full_name ?? '—',
+      teacherId:     ct?.teacher_id ?? null,
+      submission:    subMap[c.id] ?? null,
+      stats:         attMap[c.id] ?? { present: 0, absent: 0, late: 0, excused: 0 },
+      totalStudents: stuCount[c.id] ?? 0,
+    };
+  }).sort((a, b) => a.grade - b.grade || a.section.localeCompare(b.section));
+}
+
+// ─── School admin: confirm / reject a class submission ───────────────────────
+async function confirmClassSubmission(submissionId, confirmedBy, notes = null) {
+  const { error } = await db
+    .from('attendance_submissions')
+    .update({
+      status:       'confirmed',
+      confirmed_by: confirmedBy,
+      confirmed_at: new Date().toISOString(),
+    })
+    .eq('id', submissionId)
+    .eq('status', 'pending');
+  if (error) throw error;
+}
+
+async function rejectClassSubmission(submissionId, confirmedBy, notes) {
+  if (!notes?.trim()) throw new Error('يجب إدخال سبب الإعادة');
+  const { error } = await db
+    .from('attendance_submissions')
+    .update({
+      status:       'rejected',
+      confirmed_by: confirmedBy,
+      confirmed_at: new Date().toISOString(),
+      notes,
+    })
+    .eq('id', submissionId)
+    .eq('status', 'pending');
+  if (error) throw error;
+}
+
 // ─── Sync ─────────────────────────────────────────────────────────────────────
-async function syncPending() {
-  const results = { attendance: { synced: 0, failed: 0 }, reports: { synced: 0, failed: 0 } };
+async function syncPendingV2() {
+  const results = {
+    attendance: { synced: 0, failed: 0 },
+    reports:    { synced: 0, failed: 0 },
+    studentAtt: { synced: 0, failed: 0 },
+  };
 
   for (const record of getPendingAttendance()) {
-    try { await syncAttendanceRecord(record); markAttendanceSynced(record.localId); results.attendance.synced++; }
-    catch { results.attendance.failed++; }
+    try {
+      await syncAttendanceRecord(record);
+      markAttendanceSynced(record.localId);
+      results.attendance.synced++;
+    } catch { results.attendance.failed++; }
   }
 
   for (const report of getPendingReports()) {
-    try { await syncReportRecord(report); markReportSynced(report.localId); results.reports.synced++; }
-    catch { results.reports.failed++; }
+    try {
+      await syncReportRecord(report);
+      markReportSynced(report.localId);
+      results.reports.synced++;
+    } catch { results.reports.failed++; }
+  }
+
+  for (const payload of getPendingStudentAttendance()) {
+    try {
+      await syncStudentAttendanceRecord(payload);
+      markStudentAttSynced(payload.localId);
+      results.studentAtt.synced++;
+    } catch { results.studentAtt.failed++; }
   }
 
   return results;
 }
 
-window.addEventListener("online", () => syncPending().catch(console.error));
-
+// ─── Export ───────────────────────────────────────────────────────────────────
 window.NSAMS_DB = {
-  login, logout, getCurrentUser,
-  getSchools, getSchoolStatus, getSchoolById, 
-  saveAttendance, getPendingAttendance, markAttendanceSynced,
-  submitReport, getPendingReports, markReportSynced,
-  getReportsForDirectorate, updateReportStatus,
-  getTodaySummary, getSchoolsAttendanceStatus,
+  // Auth
+  login,
+  logout,
+  getCurrentUser,
+
+  // Schools
+  getSchools,
+  getSchoolStatus,
+  getSchoolById,
+
+  // School-level attendance & reports
+  saveAttendance,
+  getPendingAttendance,
+  markAttendanceSynced,
+  submitReport,
+  getPendingReports,
+  markReportSynced,
+
+  // Directorate
+  getReportsForDirectorate,
+  updateReportStatus,
+  getTodaySummary,
+  getSchoolsAttendanceStatus,
+
   // Ministry
-  getMinistryAttendanceSummary, getGovernoratesCount,
-  syncPending,
+  getMinistryAttendanceSummary,
+  getGovernoratesCount,
+
+  // Teacher layer
+  getAcademicYear,
+  gradeNameAr,
+  getTeacherClasses,
+  getClassStudents,
+  getClassSubmissionStatus,
+  getClassAttendanceForDate,
+  getClassAttendanceReport,
+  saveStudentAttendance,
+  getPendingStudentAttendance,
+
+  // School admin — class management
+  getSchoolDailySummary,
+  confirmClassSubmission,
+  rejectClassSubmission,
+
+  // Sync
+  syncPending: syncPendingV2,
 };
