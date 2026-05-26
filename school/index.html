@@ -117,6 +117,12 @@
     <polyline points="9 11 12 14 22 4"/>
     <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
   </symbol>
+  <symbol id="ic-arrow-right" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/>
+  </symbol>
+  <symbol id="ic-message-square" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+  </symbol>
 </svg>
 
 <!-- ═══ Login Screen ══════════════════════════════════════════════════════════ -->
@@ -210,6 +216,58 @@
         <div class="status-sub"   id="status-sub">يرجى تعبئة النموذج وإرساله قبل نهاية الدوام</div>
       </div>
     </div>
+
+    <!-- Class Submissions card -->
+    <section class="card" id="class-sub-card">
+      <div class="card-hdr">
+        <svg class="icon"><use href="#ic-users"/></svg>
+        <span>كشوف الحضور من المعلمين</span>
+        <button class="hdr-btn" id="btn-refresh-classes" aria-label="تحديث" style="margin-inline-start:auto">
+          <svg class="icon icon-sm" id="classes-refresh-icon"><use href="#ic-refresh"/></svg>
+        </button>
+      </div>
+      <div class="card-body" style="padding:0">
+        <div id="class-sub-loading" style="padding:16px 14px">
+          <div style="height:13px;border-radius:6px;background:linear-gradient(90deg,#f1f5f9 25%,#e2e8f0 50%,#f1f5f9 75%);background-size:200% 100%;animation:shimmer 1.4s ease-in-out infinite;margin-bottom:10px"></div>
+          <div style="height:13px;width:65%;border-radius:6px;background:linear-gradient(90deg,#f1f5f9 25%,#e2e8f0 50%,#f1f5f9 75%);background-size:200% 100%;animation:shimmer 1.4s ease-in-out infinite"></div>
+        </div>
+        <div id="class-sub-empty" hidden style="padding:28px 16px;text-align:center;color:#94A3B8;font-size:.85rem">
+          لا توجد صفوف دراسية مسجلة لهذا العام
+        </div>
+        <div id="class-sub-list" hidden></div>
+      </div>
+    </section>
+
+    <!-- Reject modal -->
+    <div id="modal-reject" class="overlay" hidden aria-modal="true" role="dialog">
+      <div class="sheet sheet-sm">
+        <div class="sheet-handle"></div>
+        <div class="sheet-hdr sheet-hdr-danger">
+          <div class="sheet-title">
+            <svg class="icon"><use href="#ic-x"/></svg>
+            إعادة الكشف للمعلم
+          </div>
+          <button class="icon-btn" id="btn-close-reject" aria-label="إغلاق">
+            <svg class="icon"><use href="#ic-x"/></svg>
+          </button>
+        </div>
+        <div class="sheet-body">
+          <p style="font-size:.85rem;color:#475569;margin-bottom:12px">الصف: <strong id="reject-class-name">—</strong></p>
+          <div class="field-group">
+            <label for="reject-notes">سبب الإعادة <span class="req">*</span></label>
+            <textarea id="reject-notes" class="field-input" rows="3"
+                      placeholder="مثال: يرجى مراجعة حضور الطالب محمد…" maxlength="300"></textarea>
+          </div>
+          <div id="reject-error" class="msg msg-error" hidden></div>
+          <button type="button" class="btn btn-danger btn-full" id="btn-confirm-reject">
+            <svg class="icon icon-sm"><use href="#ic-send"/></svg>
+            <span id="reject-btn-label">إرسال الإعادة</span>
+            <span class="spinner" id="reject-spinner" hidden></span>
+          </button>
+        </div>
+      </div>
+    </div>
+
 
     <!-- ── Attendance card ────────────────────────────────── -->
     <section class="card" id="att-card">
@@ -418,6 +476,103 @@
     </div>
   </div>
 </div>
+
+
+<style>
+/* ── Class submissions table ──────────────────────────── */
+.csub-row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--clr-border-lt, #E2E8F0);
+  font-size: .875rem;
+}
+.csub-row:last-child { border-bottom: none; }
+
+.csub-grade {
+  min-width: 32px; height: 32px;
+  background: var(--clr-primary-dim, rgba(11,43,94,.1));
+  color: var(--clr-primary, #0B2B5E);
+  border-radius: 6px;
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 800; font-size: .85rem; flex-shrink: 0;
+}
+.csub-info { flex: 1; min-width: 0; }
+.csub-name { font-weight: 600; color: #0F172A;
+             white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.csub-teacher { font-size: .75rem; color: #94A3B8; margin-top: 1px; }
+
+.csub-stats {
+  display: flex; gap: 6px; flex-shrink: 0;
+  font-size: .75rem; font-weight: 700;
+}
+.cstat-p { color: #10B981; }
+.cstat-a { color: #EF4444; }
+.cstat-l { color: #F59E0B; }
+
+.csub-badge {
+  flex-shrink: 0; padding: 3px 9px;
+  border-radius: 999px; font-size: .72rem; font-weight: 700;
+  border: 1px solid transparent;
+}
+.csub-badge-none      { background:#F1F5F9; color:#64748B; border-color:#E2E8F0; }
+.csub-badge-pending   { background:#FEF3C7; color:#92400E; border-color:#FCD34D; }
+.csub-badge-confirmed { background:#D1FAE5; color:#065F46; border-color:#6EE7B7; }
+.csub-badge-rejected  { background:#FEE2E2; color:#991B1B; border-color:#FCA5A5; }
+
+.csub-actions { display: flex; gap: 6px; flex-shrink: 0; }
+
+.csub-btn-confirm {
+  padding: 5px 10px; border-radius: 6px; font-size: .78rem; font-weight: 700;
+  background: #10B981; color: #fff; border: none; cursor: pointer;
+  transition: background .15s;
+}
+.csub-btn-confirm:hover { background: #059669; }
+.csub-btn-confirm:disabled { opacity: .5; cursor: not-allowed; }
+
+.csub-btn-reject {
+  padding: 5px 10px; border-radius: 6px; font-size: .78rem; font-weight: 700;
+  background: #FEE2E2; color: #DC2626; border: 1px solid #FCA5A5; cursor: pointer;
+  transition: background .15s;
+}
+.csub-btn-reject:hover { background: #FEE2E2; }
+.csub-btn-reject:disabled { opacity: .5; cursor: not-allowed; }
+
+/* overlay / sheet for reject modal */
+#modal-reject.overlay {
+  position: fixed; inset: 0; z-index: 400;
+  background: rgba(0,0,0,.45);
+  display: flex; align-items: flex-end; justify-content: center;
+}
+#modal-reject .sheet-sm {
+  background: #fff;
+  border-radius: 18px 18px 0 0;
+  width: 100%; max-width: 560px;
+  padding: 0 0 calc(16px + env(safe-area-inset-bottom));
+}
+.sheet-handle {
+  width: 36px; height: 4px; border-radius: 2px;
+  background: #E2E8F0; margin: 12px auto 0;
+}
+.sheet-hdr-danger {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 16px 10px;
+}
+.sheet-hdr-danger .sheet-title {
+  display: flex; align-items: center; gap: 8px;
+  font-weight: 700; font-size: .95rem; color: #DC2626;
+}
+#modal-reject .sheet-body { padding: 4px 16px 0; }
+.btn-danger {
+  background: #EF4444; color: #fff;
+  display: flex; align-items: center; justify-content: center;
+  gap: 8px; padding: 12px; border-radius: 8px;
+  font-weight: 700; font-size: .95rem; cursor: pointer; border: none;
+  margin-top: 14px; width: 100%;
+  transition: background .15s;
+}
+.btn-danger:hover { background: #DC2626; }
+.btn-danger:disabled { opacity: .5; cursor: not-allowed; }
+</style>
 
 <!-- Toast zone -->
 <div id="toasts" class="toast-zone" aria-live="polite" aria-atomic="false"></div>

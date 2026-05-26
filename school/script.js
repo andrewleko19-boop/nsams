@@ -678,3 +678,208 @@ async function bootstrap() {
 }
 
 bootstrap();
+// ════════════════════════════════════════════════════════════════════════════
+
+// ════════════════════════════════════════════════════════════════════════════
+// CLASS SUBMISSIONS — Teacher → Principal review flow
+// ════════════════════════════════════════════════════════════════════════════
+
+// ── DOM refs (el() is already defined above) ──────────────────────────────────
+const clasSubLoading     = el('class-sub-loading');
+const clasSubEmpty       = el('class-sub-empty');
+const clasSubList        = el('class-sub-list');
+const btnRefreshClasses  = el('btn-refresh-classes');
+const classesRefreshIcon = el('classes-refresh-icon');
+const modalReject        = el('modal-reject');
+const rejectClassName    = el('reject-class-name');
+const rejectNotes        = el('reject-notes');
+const rejectError        = el('reject-error');
+const btnCloseReject     = el('btn-close-reject');
+const btnConfirmReject   = el('btn-confirm-reject');
+const rejectBtnLabel     = el('reject-btn-label');
+const rejectSpinner      = el('reject-spinner');
+
+// ── State ─────────────────────────────────────────────────────────────────────
+let _rejectSubmissionId = null;
+let _classBusy          = false;
+
+// ── Load class summaries ──────────────────────────────────────────────────────
+async function loadClassSummaries() {
+  if (!S.school?.id) return;
+  const DB = window.NSAMS_DB;
+  if (!DB || !DB.getSchoolDailySummary) return;
+
+  show(clasSubLoading);
+  hide(clasSubList);
+  hide(clasSubEmpty);
+  classesRefreshIcon.classList.add('syncing');
+
+  try {
+    const summaries = await DB.getSchoolDailySummary(S.school.id, todayISO());
+    hide(clasSubLoading);
+    classesRefreshIcon.classList.remove('syncing');
+
+    if (!summaries || summaries.length === 0) {
+      show(clasSubEmpty);
+      return;
+    }
+
+    clasSubList.innerHTML = '';
+    for (const s of summaries) clasSubList.appendChild(buildClassRow(s));
+    show(clasSubList);
+
+    // Auto-populate aggregate student counts from teacher data
+    const totalPresent = summaries.reduce((a, s) => a + s.stats.present + s.stats.late, 0);
+    const totalAbsent  = summaries.reduce((a, s) => a + s.stats.absent  + s.stats.excused, 0);
+    if (totalPresent > 0 || totalAbsent > 0) {
+      inStuPresent.value = totalPresent;
+      inStuAbsent.value  = totalAbsent;
+    }
+  } catch (err) {
+    console.error('[NSAMS] loadClassSummaries', err);
+    hide(clasSubLoading);
+    classesRefreshIcon.classList.remove('syncing');
+    toast('تعذّر تحميل كشوف المعلمين', 'error');
+  }
+}
+
+// ── Build one class row ───────────────────────────────────────────────────────
+function escapeHtml(str) {
+  return String(str)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+function buildClassRow(s) {
+  const sub    = s.submission;
+  const status = sub?.status ?? 'none';
+
+  const badgeMap = {
+    none:      ['csub-badge-none',      'لم يُرسل'],
+    pending:   ['csub-badge-pending',   'بانتظار المراجعة'],
+    confirmed: ['csub-badge-confirmed', 'مؤكد ✓'],
+    rejected:  ['csub-badge-rejected',  'مُعاد ✗'],
+  };
+  const [badgeCls, badgeTxt] = badgeMap[status] ?? badgeMap.none;
+
+  const statsHtml = sub
+    ? `<span class="cstat-p">ح${s.stats.present}</span>
+       <span class="cstat-l">ت${s.stats.late}</span>
+       <span class="cstat-a">غ${s.stats.absent + s.stats.excused}</span>`
+    : `<span style="color:#CBD5E1">—</span>`;
+
+  const actionsHtml = status === 'pending'
+    ? `<div class="csub-actions">
+         <button class="csub-btn-confirm" data-sid="${sub.id}" data-cname="${escapeHtml(s.displayName)}">تأكيد</button>
+         <button class="csub-btn-reject"  data-sid="${sub.id}" data-cname="${escapeHtml(s.displayName)}">إعادة</button>
+       </div>`
+    : '';
+
+  const div = document.createElement('div');
+  div.className = 'csub-row';
+  div.innerHTML = `
+    <div class="csub-grade">${s.grade}</div>
+    <div class="csub-info">
+      <div class="csub-name">${escapeHtml(s.displayName)}</div>
+      <div class="csub-teacher">${escapeHtml(s.teacherName)}</div>
+    </div>
+    <div class="csub-stats">${statsHtml}</div>
+    <span class="csub-badge ${badgeCls}">${badgeTxt}</span>
+    ${actionsHtml}
+  `;
+  return div;
+}
+
+// ── Confirm ───────────────────────────────────────────────────────────────────
+clasSubList.addEventListener('click', async (e) => {
+  const confirmBtn = e.target.closest('.csub-btn-confirm');
+  const rejectBtn  = e.target.closest('.csub-btn-reject');
+  if (confirmBtn) await handleConfirm(confirmBtn);
+  if (rejectBtn)  openRejectModal(rejectBtn.dataset.sid, rejectBtn.dataset.cname);
+});
+
+async function handleConfirm(btn) {
+  if (_classBusy) return;
+  _classBusy = true;
+  const sid   = btn.dataset.sid;
+  const cname = btn.dataset.cname;
+  btn.disabled    = true;
+  btn.textContent = '…';
+
+  try {
+    await window.NSAMS_DB.confirmClassSubmission(sid, S.user.user.id);
+    toast(`تم تأكيد كشف ${cname}`, 'success');
+    await loadClassSummaries();
+  } catch (err) {
+    console.error('[NSAMS] handleConfirm', err);
+    toast('تعذّر تأكيد الكشف', 'error');
+    btn.disabled    = false;
+    btn.textContent = 'تأكيد';
+  } finally {
+    _classBusy = false;
+  }
+}
+
+// ── Reject modal ──────────────────────────────────────────────────────────────
+function openRejectModal(sid, cname) {
+  _rejectSubmissionId       = sid;
+  rejectClassName.textContent = cname;
+  rejectNotes.value         = '';
+  hide(rejectError);
+  show(modalReject);
+  document.body.style.overflow = 'hidden';
+  setTimeout(() => rejectNotes.focus(), 80);
+}
+
+function closeRejectModal() {
+  hide(modalReject);
+  document.body.style.overflow = '';
+  _rejectSubmissionId = null;
+}
+
+btnCloseReject.addEventListener('click', closeRejectModal);
+modalReject.addEventListener('click', (e) => { if (e.target === modalReject) closeRejectModal(); });
+
+btnConfirmReject.addEventListener('click', async () => {
+  const notes = rejectNotes.value.trim();
+  if (!notes) {
+    rejectError.textContent = 'يرجى كتابة سبب الإعادة';
+    show(rejectError);
+    rejectNotes.focus();
+    return;
+  }
+  hide(rejectError);
+  btnConfirmReject.disabled = true;
+  rejectBtnLabel.hidden     = true;
+  rejectSpinner.hidden      = false;
+
+  try {
+    await window.NSAMS_DB.rejectClassSubmission(_rejectSubmissionId, S.user.user.id, notes);
+    const cname = rejectClassName.textContent;
+    closeRejectModal();
+    toast(`تم إعادة كشف ${cname} للمعلم`, 'warning');
+    await loadClassSummaries();
+  } catch (err) {
+    console.error('[NSAMS] rejectSubmission', err);
+    rejectError.textContent = 'حدث خطأ، يرجى المحاولة مجدداً';
+    show(rejectError);
+  } finally {
+    btnConfirmReject.disabled = false;
+    rejectBtnLabel.hidden     = false;
+    rejectSpinner.hidden      = true;
+  }
+});
+
+btnRefreshClasses.addEventListener('click', () => loadClassSummaries());
+
+// ── Hook into initApp: load class summaries after school data is ready ──────────
+// initApp() is a regular function declaration in the same module; we find the
+// await doSync() call at the end of initApp and loadClassSummaries runs right after.
+// We patch by re-adding a listener that fires once the app screen becomes visible.
+const _classSubObserver = new MutationObserver(() => {
+  const appScreen = el('screen-app');
+  if (appScreen && !appScreen.hidden) {
+    loadClassSummaries();
+  }
+});
+_classSubObserver.observe(el('screen-app'), { attributeFilter: ['hidden'] });
