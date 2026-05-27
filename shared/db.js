@@ -628,7 +628,7 @@ async function getSchoolDailySummary(schoolId, date) {
 
   const [subRes, attRes, stuRes] = await Promise.all([
     db.from('attendance_submissions')
-      .select('class_id, status, submitted_at, confirmed_at')
+      .select('id, class_id, status, submitted_at, confirmed_at')
       .eq('school_id', schoolId)
       .eq('date',      isoDate)
       .in('class_id',  classIds),
