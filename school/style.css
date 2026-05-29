@@ -197,6 +197,13 @@ ul { list-style: none; }
 
 textarea.field-input { resize: vertical; min-height: 80px; }
 
+.field-input[readonly] {
+  background: #F1F5F9;
+  color: var(--clr-text-2);
+  cursor: default;
+}
+.field-input[readonly]:focus { box-shadow: none; border-color: var(--clr-border); }
+
 /* Input with leading icon */
 .input-wrap {
   position: relative;
