@@ -19,6 +19,7 @@ const {
   syncPending,
   getPendingAttendance,
   getPendingReports,
+  localDateISO,
 } = window.NSAMS_DB;
 
 // ── App state ─────────────────────────────────────────────────────────────────
@@ -63,25 +64,6 @@ function normaliseSchool(row) {
   };
 }
 
-// 1. جلب ملخص الصفوف اليومي
-async function loadClassSummary() {
-  const { getSchoolDailySummary } = window.NSAMS_DB;
-  const summaries = await getSchoolDailySummary(S.school.id, todayISO());
-
-  // حسب الإجمالي تلقائياً من بيانات المعلمين
-  const totalStudentsPresent = summaries.reduce(
-    (acc, c) => acc + (c.stats.present + c.stats.late), 0
-  );
-  const totalStudentsAbsent = summaries.reduce(
-    (acc, c) => acc + (c.stats.absent + c.stats.excused), 0
-  );
-
-  // اعرضها في الـ UI بدلاً من الإدخال اليدوي
-  inStuPresent.value = totalStudentsPresent;
-  inStuAbsent.value  = totalStudentsAbsent;
-
-  renderClassSummaryTable(summaries);
-}
 /**
  * Fetch school from Supabase, fall back to localStorage cache when offline.
  * Sets S.school and updates the cache on success.
@@ -198,7 +180,9 @@ const toastZone = el('toasts');
 
 // ── Utilities ─────────────────────────────────────────────────────────────────
 function todayISO() {
-  return new Date().toISOString().slice(0, 10);
+  if (typeof localDateISO === 'function') return localDateISO();
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 }
 
 function formatDateAr(iso) {
@@ -230,8 +214,10 @@ function toast(msg, type = 'info', ms = 3800) {
   const t = document.createElement('div');
   t.className = `toast toast-${type}`;
   t.innerHTML =
-    `<svg class="icon icon-sm" style="flex-shrink:0"><use href="${TOAST_ICONS[type]}"/></svg>` +
-    `<span>${msg}</span>`;
+    `<svg class="icon icon-sm" style="flex-shrink:0"><use href="${TOAST_ICONS[type]}"/></svg>`;
+  const span = document.createElement('span');
+  span.textContent = msg;
+  t.appendChild(span);
   toastZone.prepend(t);
   setTimeout(() => {
     t.classList.add('removing');
@@ -325,12 +311,15 @@ function refreshTeacherUI() {
   const absent  = S.absentTeachers.length;
   const present = Math.max(0, total - absent);
 
+  const prevAbsent  = tAbsent.textContent;
+  const prevPresent = tPresent.textContent;
+
   tTotal.textContent   = total;
   tAbsent.textContent  = absent;
   tPresent.textContent = present;
 
-  animateBump(tAbsent);
-  animateBump(tPresent);
+  if (String(absent)  !== prevAbsent)  animateBump(tAbsent);
+  if (String(present) !== prevPresent) animateBump(tPresent);
 }
 
 // ── Absent teachers list ──────────────────────────────────────────────────────
@@ -392,9 +381,12 @@ btnSubmitAtt.addEventListener('click', async () => {
     teachers_present: Math.max(0, total - absentCount),
     teachers_absent:  absentCount,
     students_present: studPresent,
-    students_absent:  studAbsent,
+    // NOTE: daily_attendance has no students_absent column — do not send it,
+    // or the upsert fails and silently falls back to the offline queue forever.
+    // studAbsent stays UI-only (derived from teacher data).
     notes:            inNotes.value.trim() || null,
     submitted_by:     S.user?.user?.id ?? null,
+    submitted_at:     new Date().toISOString(),
   };
 
   btnSubmitAtt.disabled = true;
@@ -660,6 +652,11 @@ async function initApp() {
 
   // Kick off sync of any offline-queued records
   await doSync();
+
+  // Load teacher submissions now that S.school is populated.
+  // (Previously triggered by a fragile MutationObserver that could fire before
+  //  school data was ready; called directly here instead.)
+  await loadClassSummaries();
 }
 
 // ── Bootstrap ─────────────────────────────────────────────────────────────────
@@ -796,6 +793,10 @@ clasSubList.addEventListener('click', async (e) => {
 
 async function handleConfirm(btn) {
   if (_classBusy) return;
+  if (!navigator.onLine) {
+    toast('تأكيد الكشف يحتاج اتصالاً بالإنترنت', 'warning', 3000);
+    return;
+  }
   _classBusy = true;
   const sid   = btn.dataset.sid;
   const cname = btn.dataset.cname;
@@ -846,6 +847,11 @@ btnConfirmReject.addEventListener('click', async () => {
     show(rejectError);
     return;
   }
+  if (!navigator.onLine) {
+    rejectError.textContent = 'إعادة الكشف تحتاج اتصالاً بالإنترنت';
+    show(rejectError);
+    return;
+  }
   const notes = rejectNotes.value.trim();
   if (!notes) {
     rejectError.textContent = 'يرجى كتابة سبب الإعادة';
@@ -876,15 +882,3 @@ btnConfirmReject.addEventListener('click', async () => {
 });
 
 btnRefreshClasses.addEventListener('click', () => loadClassSummaries());
-
-// ── Hook into initApp: load class summaries after school data is ready ──────────
-// initApp() is a regular function declaration in the same module; we find the
-// await doSync() call at the end of initApp and loadClassSummaries runs right after.
-// We patch by re-adding a listener that fires once the app screen becomes visible.
-const _classSubObserver = new MutationObserver(() => {
-  const appScreen = el('screen-app');
-  if (appScreen && !appScreen.hidden) {
-    loadClassSummaries();
-  }
-});
-_classSubObserver.observe(el('screen-app'), { attributeFilter: ['hidden'] });
