@@ -32,6 +32,18 @@ function generateReceiptNumber() {
 
 function isOnline() { return navigator.onLine; }
 
+// Local calendar date (YYYY-MM-DD) in the device timezone — NOT UTC.
+// new Date().toISOString() returns UTC, which is the PREVIOUS day between
+// local 00:00–03:00 in Syria (UTC+3). For a date-keyed attendance system that
+// silently files records under the wrong day. Always build from local parts.
+function localDateISO(d = new Date()) {
+  const dt = d instanceof Date ? d : new Date(d);
+  const y  = dt.getFullYear();
+  const m  = String(dt.getMonth() + 1).padStart(2, '0');
+  const da = String(dt.getDate()).padStart(2, '0');
+  return `${y}-${m}-${da}`;
+}
+
 // ─── Auth ─────────────────────────────────────────────────────────────────────
 async function login(email, password) {
   const { data: authData, error: authError } =
@@ -93,7 +105,7 @@ async function getSchools(directorateId) {
 }
 
 async function getSchoolStatus(schoolId, date) {
-  const isoDate = date instanceof Date ? date.toISOString().slice(0, 10) : date;
+  const isoDate = date instanceof Date ? localDateISO(date) : date;
 
   const [attendanceRes, reportRes] = await Promise.all([
     db.from("daily_attendance").select("id").eq("school_id", schoolId).eq("date", isoDate).limit(1),
@@ -239,7 +251,7 @@ async function updateReportStatus(reportId, newStatus) {
 }
 
 async function getTodaySummary(directorateId) {
-  const today = new Date().toISOString().slice(0, 10);
+  const today = localDateISO();
   const [attendanceRes, reportsRes] = await Promise.all([
     db.from("daily_attendance")
       .select("teachers_present, students_present, school:schools!inner(directorate_id)")
@@ -270,7 +282,7 @@ async function getTodaySummary(directorateId) {
 }
 
 async function getSchoolsAttendanceStatus(directorateId, date) {
-  const isoDate  = date instanceof Date ? date.toISOString().slice(0, 10) : date;
+  const isoDate  = date instanceof Date ? localDateISO(date) : date;
   const schoolsRes = await db.from("schools").select("id").eq("directorate_id", directorateId);
   if (schoolsRes.error) throw schoolsRes.error;
 
@@ -294,7 +306,7 @@ async function getSchoolsAttendanceStatus(directorateId, date) {
 
 // ─── Ministry ─────────────────────────────────────────────────────────────────
 async function getMinistryAttendanceSummary(date) {
-  const isoDate = date instanceof Date ? date.toISOString().slice(0, 10) : date;
+  const isoDate = date instanceof Date ? localDateISO(date) : date;
 
   const { data: directorates, error: dirErr } = await db
     .from("directorates")
@@ -475,7 +487,7 @@ async function getClassStudents(classId) {
 
 // ─── Teacher: check submission status for a class + date ─────────────────────
 async function getClassSubmissionStatus(classId, date) {
-  const isoDate = date instanceof Date ? date.toISOString().slice(0, 10) : date;
+  const isoDate = date instanceof Date ? localDateISO(date) : date;
 
   const { data, error } = await db
     .from('attendance_submissions')
@@ -491,7 +503,7 @@ async function getClassSubmissionStatus(classId, date) {
 // ─── Teacher: load existing attendance records for a class + date ─────────────
 // Returns an object: { [student_id]: { status, reason } }
 async function getClassAttendanceForDate(classId, date) {
-  const isoDate = date instanceof Date ? date.toISOString().slice(0, 10) : date;
+  const isoDate = date instanceof Date ? localDateISO(date) : date;
 
   const { data, error } = await db
     .from('daily_student_attendance')
@@ -510,7 +522,7 @@ async function getClassAttendanceForDate(classId, date) {
 
 // ─── Teacher: get attendance report for printing ──────────────────────────────
 async function getClassAttendanceReport(classId, date) {
-  const isoDate = date instanceof Date ? date.toISOString().slice(0, 10) : date;
+  const isoDate = date instanceof Date ? localDateISO(date) : date;
 
   const { data, error } = await db
     .from('daily_student_attendance')
@@ -519,13 +531,14 @@ async function getClassAttendanceReport(classId, date) {
       students:student_id ( full_name, seat_number )
     `)
     .eq('class_id', classId)
-    .eq('date',     isoDate)
-    // وبدلاً منه رتّب النتيجة في JS بعد الجلب:
-    return (data ?? []).sort
-    (
-     (a, b) =>
-     (a.students?.seat_number ?? 999) - (b.students?.seat_number ?? 999)
-    );
+    .eq('date',     isoDate);
+
+  if (error) throw error;
+
+  // Sort by seat number in JS (Postgrest can't order by an embedded column).
+  return (data ?? []).sort(
+    (a, b) => (a.students?.seat_number ?? 999) - (b.students?.seat_number ?? 999)
+  );
 }
 
 // ─── Student attendance offline queue ────────────────────────────────────────
@@ -606,7 +619,7 @@ async function saveStudentAttendance({ records, classId, schoolId, date, teacher
 
 // ─── School admin: daily summary per class ───────────────────────────────────
 async function getSchoolDailySummary(schoolId, date) {
-  const isoDate      = date instanceof Date ? date.toISOString().slice(0, 10) : date;
+  const isoDate      = date instanceof Date ? localDateISO(date) : date;
   const academicYear = getAcademicYear(new Date(isoDate));
 
   const { data: classRows, error: classErr } = await db
@@ -778,6 +791,7 @@ window.NSAMS_DB = {
 
   // Teacher layer
   getAcademicYear,
+  localDateISO,
   gradeNameAr,
   getTeacherClasses,
   getClassStudents,
