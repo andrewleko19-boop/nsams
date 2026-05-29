@@ -32,6 +32,51 @@ function generateReceiptNumber() {
 
 function isOnline() { return navigator.onLine; }
 
+// ── Report photo storage ──────────────────────────────────────────────────────
+// Emergency-report photos arrive from the UI as data: URIs. Storing a multi-MB
+// base64 string inside a table row is wasteful, so we upload to Supabase Storage
+// and keep only the public URL. SAFE FALLBACK: if the bucket is missing or the
+// upload fails, we KEEP the original data URI rather than dropping the photo —
+// no regression versus the old behaviour, and no silent data loss.
+const REPORT_BUCKET = 'report-photos';
+
+async function uploadDataUri(dataUri) {
+  const m = /^data:([^;]+);base64,(.*)$/s.exec(dataUri);
+  if (!m) return dataUri; // not a data URI — leave untouched
+  const mime = m[1];
+  const b64  = m[2];
+  const ext  = (mime.split('/')[1] || 'bin').replace(/[^a-z0-9]/gi, '') || 'bin';
+
+  const binary = atob(b64);
+  const bytes  = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+
+  const path = `reports/${Date.now()}_${Math.random().toString(36).slice(2, 8)}.${ext}`;
+  const { error } = await db.storage
+    .from(REPORT_BUCKET)
+    .upload(path, bytes, { contentType: mime, upsert: false });
+  if (error) throw error;
+
+  const { data } = db.storage.from(REPORT_BUCKET).getPublicUrl(path);
+  return data.publicUrl;
+}
+
+// Replace any inline data-URI photos with uploaded Storage URLs.
+// Keeps the data URI on failure so the photo is never lost.
+async function materialisePhotos(mediaUrls) {
+  if (!Array.isArray(mediaUrls) || mediaUrls.length === 0) return mediaUrls ?? [];
+  const out = [];
+  for (const u of mediaUrls) {
+    if (typeof u === 'string' && u.startsWith('data:')) {
+      try { out.push(await uploadDataUri(u)); }
+      catch (e) { console.warn('[NSAMS] photo upload failed — keeping inline data URI', e); out.push(u); }
+    } else {
+      out.push(u);
+    }
+  }
+  return out;
+}
+
 // Local calendar date (YYYY-MM-DD) in the device timezone — NOT UTC.
 // new Date().toISOString() returns UTC, which is the PREVIOUS day between
 // local 00:00–03:00 in Syria (UTC+3). For a date-keyed attendance system that
@@ -178,6 +223,9 @@ function markAttendanceSynced(localId) {
 // ─── Reports ──────────────────────────────────────────────────────────────────
 async function syncReportRecord(report) {
   const { localId, synced: _synced, receiptNumber: _r, createdAt: _c, ...payload } = report;
+  // Upload inline photos to Storage; the row stores only URLs (or data URIs on
+  // failure). Runs on both the online path and on offline-queue sync.
+  payload.media_urls = await materialisePhotos(payload.media_urls);
   const { data, error } = await db
     .from("emergency_reports")
     .insert(payload)
