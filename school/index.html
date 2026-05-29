@@ -139,7 +139,7 @@
         <p class="login-ministry">وزارة التربية – الجمهورية العربية السورية</p>
       </div>
 
-      <form id="form-login" novalidate autocomplete="off">
+      <form id="form-login" novalidate>
         <div class="field-group">
           <label for="in-email">البريد الإلكتروني</label>
           <div class="input-wrap">
@@ -324,14 +324,17 @@
           <div class="field-group">
             <label for="in-stu-present">حاضرون</label>
             <input type="number" id="in-stu-present" class="field-input"
-                   min="0" max="9999" value="0" inputmode="numeric" />
+                   min="0" max="9999" value="0" inputmode="numeric" readonly />
           </div>
           <div class="field-group">
             <label for="in-stu-absent">غائبون</label>
             <input type="number" id="in-stu-absent" class="field-input"
-                   min="0" max="9999" value="0" inputmode="numeric" />
+                   min="0" max="9999" value="0" inputmode="numeric" readonly />
           </div>
         </div>
+        <p style="font-size:.75rem;color:#94A3B8;margin:-4px 0 10px">
+          تُحتسب أعداد الطلاب تلقائياً من كشوف المعلمين المؤكدة.
+        </p>
 
         <div class="field-group">
           <label for="in-notes">ملاحظات <span class="optional">(اختياري)</span></label>
