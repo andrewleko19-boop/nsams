@@ -21,6 +21,7 @@ const {
   getPendingStudentAttendance,
   syncPending,
   gradeNameAr,
+  localDateISO,
 } = window.NSAMS_DB;
 
 // ── App State ─────────────────────────────────────────────────────────────────
@@ -35,8 +36,37 @@ const S = {
   isDirty:          false,   // unsaved changes since last render
 };
 
-// Default status for a student when the teacher first opens the class
+// Default status for a student when the teacher first opens the class.
+// present-by-default is intentional: paper registers work by marking only the
+// absentees. The confirm modal (not a per-row "must mark" check) is the guard.
 const DEFAULT_STATUS = 'present';
+
+// Statuses that can carry a note/reason.
+const REASON_STATUSES = new Set(['late', 'absent', 'excused']);
+
+// ── Local draft store ─────────────────────────────────────────────────────────
+// Drafts live ONLY on this device and never touch the DB or the manager's queue.
+// A class+date sheet reaches Supabase exclusively via an explicit "إرسال للمدير".
+const DRAFT_PFX = 'nsams_draft_';
+const draftKey = (classId, date) => `${DRAFT_PFX}${classId}_${date}`;
+
+function loadLocalDraft(classId, date) {
+  try {
+    const raw = localStorage.getItem(draftKey(classId, date));
+    return raw ? JSON.parse(raw) : null; // { attendance, status, ts }
+  } catch { return null; }
+}
+function saveLocalDraft(classId, date, attendance, status = 'draft') {
+  try {
+    localStorage.setItem(
+      draftKey(classId, date),
+      JSON.stringify({ attendance, status, ts: Date.now() })
+    );
+  } catch { /* quota — non-fatal */ }
+}
+function clearLocalDraft(classId, date) {
+  try { localStorage.removeItem(draftKey(classId, date)); } catch { /* ignore */ }
+}
 
 // ── DOM refs ──────────────────────────────────────────────────────────────────
 const $ = (id) => document.getElementById(id);
@@ -121,7 +151,13 @@ const confirmSpinner    = $('confirm-spinner');
 const toastZone = $('toasts');
 
 // ── Utilities ─────────────────────────────────────────────────────────────────
-function todayISO() { return new Date().toISOString().slice(0, 10); }
+// Local calendar date (not UTC). Falls back to a local computation if the DB
+// layer didn't export the helper (e.g. stale cached db.js).
+function todayISO() {
+  if (typeof localDateISO === 'function') return localDateISO();
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
 
 function formatDateAr(iso) {
   return new Date(iso + 'T00:00:00').toLocaleDateString('ar-SY', {
@@ -151,9 +187,13 @@ const TOAST_ICONS = {
 function toast(msg, type = 'info', ms = 3800) {
   const t = document.createElement('div');
   t.className = `toast toast-${type}`;
+  // Icon is a static, trusted template; the message is user/server-derived so
+  // it goes in via textContent to avoid HTML injection.
   t.innerHTML =
-    `<svg class="icon icon-sm" style="flex-shrink:0"><use href="${TOAST_ICONS[type]}"/></svg>` +
-    `<span>${msg}</span>`;
+    `<svg class="icon icon-sm" style="flex-shrink:0"><use href="${TOAST_ICONS[type]}"/></svg>`;
+  const span = document.createElement('span');
+  span.textContent = msg;
+  t.appendChild(span);
   toastZone.prepend(t);
   setTimeout(() => {
     t.classList.add('removing');
@@ -407,17 +447,28 @@ async function openAttendanceView(cls) {
     ]);
 
     S.students  = students;
-    S.submission = submission;
 
-    // Pre-fill attendance from existing records OR default all to 'present'
+    const localDraft = loadLocalDraft(cls.id, today);
+
     if (Object.keys(existing).length > 0) {
-      // Re-opening: restore saved state
+      // DB has real records → authoritative. A local draft is now stale.
       S.attendance = existing;
+      S.submission = submission;
+      clearLocalDraft(cls.id, today);
+    } else if (localDraft && localDraft.attendance) {
+      // No DB record yet, but an unsent local draft exists → restore it.
+      S.attendance = localDraft.attendance;
+      // If we submitted while offline, the submission lives only locally as
+      // 'pending' until sync; reflect that so the banner is correct.
+      S.submission = submission
+        ?? (localDraft.status === 'pending' ? { status: 'pending' } : null);
     } else {
-      // First open today: default everyone to 'present'
+      // First open today: everyone present by default; teacher flips absentees.
+      S.attendance = {};
       for (const stu of students) {
         S.attendance[stu.id] = { status: DEFAULT_STATUS, reason: null };
       }
+      S.submission = submission;
     }
 
     hide(studentsLoading);
@@ -487,7 +538,7 @@ function buildStudentRow(stu, num, rec) {
   li.dataset.status = rec.status;
   li.setAttribute('role', 'listitem');
 
-  const showReason = rec.reason && (rec.status === 'excused' || rec.status === 'absent');
+  const showReason = rec.reason && REASON_STATUSES.has(rec.status);
 
   li.innerHTML = `
     <span class="student-num">${num}</span>
@@ -498,10 +549,10 @@ function buildStudentRow(stu, num, rec) {
         : ''}
     </div>
     <div class="stn-btns" data-sid="${escapeHtml(stu.id)}" aria-label="حالة ${escapeHtml(stu.full_name)}">
-      <button class="stn-btn${rec.status==='present' ?' active':''}" data-s="present"  title="حاضر"   aria-pressed="${rec.status==='present'}">ح</button>
-      <button class="stn-btn${rec.status==='late'    ?' active':''}" data-s="late"     title="متأخر"  aria-pressed="${rec.status==='late'}">ت</button>
-      <button class="stn-btn${rec.status==='absent'  ?' active':''}" data-s="absent"   title="غائب"   aria-pressed="${rec.status==='absent'}">غ</button>
-      <button class="stn-btn${rec.status==='excused' ?' active':''}" data-s="excused"  title="بعذر"   aria-pressed="${rec.status==='excused'}">ع</button>
+      <button class="stn-btn${rec.status==='present' ?' active':''}" data-s="present"  title="حاضر"  aria-label="حاضر"  aria-pressed="${rec.status==='present'}">ح</button>
+      <button class="stn-btn${rec.status==='late'    ?' active':''}" data-s="late"     title="متأخر" aria-label="متأخر" aria-pressed="${rec.status==='late'}">ت</button>
+      <button class="stn-btn${rec.status==='absent'  ?' active':''}" data-s="absent"   title="غائب"  aria-label="غائب"  aria-pressed="${rec.status==='absent'}">غ</button>
+      <button class="stn-btn${rec.status==='excused' ?' active':''}" data-s="excused"  title="بعذر"  aria-label="بعذر"  aria-pressed="${rec.status==='excused'}">ع</button>
     </div>
   `;
 
@@ -532,13 +583,12 @@ studentsList.addEventListener('click', (e) => {
   // Update row color
   row.dataset.status = status;
 
-  // Show reason modal for 'absent' or 'excused'
-  if (status === 'absent' || status === 'excused') {
+  // Show reason modal for any status that can carry a note (late/absent/excused)
+  if (REASON_STATUSES.has(status)) {
     openReasonModal(sid);
   } else {
-    // Clear reason if switching away from those statuses
+    // present → clear any reason
     S.attendance[sid].reason = null;
-    // Update reason text in row
     const nameWrap = row.querySelector('.student-name-wrap');
     const existing = nameWrap.querySelector('.student-reason-text');
     if (existing) existing.remove();
@@ -619,9 +669,9 @@ modalReason.addEventListener('click', (e) => {
 
 // ── Back button ───────────────────────────────────────────────────────────────
 btnBack.addEventListener('click', async () => {
-  if (S.isDirty) {
-    // Auto-save draft silently before navigating back
-    await saveDraft(true);
+  if (S.isDirty && S.activeClass) {
+    // Persist locally so the teacher can resume — does NOT submit to the manager.
+    saveLocalDraft(S.activeClass.id, todayISO(), S.attendance, 'draft');
   }
   S.activeClass = null;
   S.students    = [];
@@ -633,47 +683,24 @@ btnBack.addEventListener('click', async () => {
   await loadClasses();
 });
 
-// ── Save Draft ────────────────────────────────────────────────────────────────
-// Saves current attendance to IndexedDB queue without setting submission status.
-// Used for "save and come back later" use case.
-async function saveDraft(silent = false) {
-  if (S.students.length === 0) return;
-  const records = buildRecordsArray();
-  // For a draft, we still upsert the student rows but do NOT create/update
-  // the attendance_submissions row. We achieve this by calling saveStudentAttendance
-  // but the server-side function always upserts the submission as 'pending'.
-  // For a true draft-only save without touching submissions, you would need a
-  // separate RPC. For MVP simplicity, saving draft = pending submission.
-  try {
-    await saveStudentAttendance({
-      records,
-      classId:   S.activeClass.id,
-      schoolId:  S.activeClass.schoolId,
-      date:      todayISO(),
-      teacherId: S.user.user.id,
-    });
-    S.isDirty = false;
-    if (!silent) toast('تم حفظ الكشف مؤقتاً', 'success');
-    refreshPendingBar();
-  } catch (err) {
-    if (!silent) toast('تعذّر الحفظ المؤقت', 'error');
-    console.error('[NSAMS-T] saveDraft', err);
-  }
+// ── Save Draft (local only) ───────────────────────────────────────────────────
+// Stores the current marks on this device. Nothing is sent to the manager and
+// no attendance_submissions row is created until the teacher explicitly submits.
+function saveDraft(silent = false) {
+  if (!S.activeClass || S.students.length === 0) return;
+  saveLocalDraft(S.activeClass.id, todayISO(), S.attendance, 'draft');
+  S.isDirty = false;
+  if (!silent) toast('تم حفظ الكشف مؤقتاً على هذا الجهاز', 'success');
 }
 
 btnSaveDraft.addEventListener('click', () => saveDraft(false));
 
 // ── Submit Attendance ─────────────────────────────────────────────────────────
 btnSubmitAtt.addEventListener('click', () => {
-  // Validate: all students must have a status assigned
-  const total = S.students.length;
-  const marked = Object.values(S.attendance).filter(r => r.status).length;
-
-  if (marked < total) {
-    toast(`${total - marked} طالب لم يُحدد وضعه بعد`, 'warning');
-    return;
-  }
-
+  if (S.students.length === 0) return;
+  // No per-row "must mark" check: present is the deliberate default, so every
+  // student already has a status. The confirm modal (counts + all-absent
+  // warning) is the real guard against accidental submission.
   openConfirmModal();
 });
 
@@ -739,22 +766,35 @@ btnConfirmSubmit.addEventListener('click', async () => {
     });
 
     S.isDirty = false;
-    closeConfirmModal();
+    const today = todayISO();
 
     if (result.synced) {
+      // DB now owns this sheet — drop the local draft.
+      clearLocalDraft(S.activeClass.id, today);
       toast('تم إرسال الكشف للمدير بنجاح', 'success');
+      // Re-fetch the real status: the manager may have already acted on it.
+      try {
+        S.submission = await getClassSubmissionStatus(S.activeClass.id, today);
+      } catch {
+        S.submission = { status: 'pending' };
+      }
     } else {
+      // Offline: keep the sheet locally as 'pending' so reopening restores both
+      // the marks and the "awaiting sync" state instead of falling back to defaults.
+      saveLocalDraft(S.activeClass.id, today, S.attendance, 'pending');
+      S.submission = { status: 'pending' };
       toast('حُفظ الكشف محلياً وسيُرسل عند توفر الاتصال', 'warning', 5000);
       refreshPendingBar();
     }
 
-    // Update submission state + re-render banners
-    S.submission = { status: 'pending' };
+    closeConfirmModal();
     renderSubmissionBanners();
 
-    // Update the footer
-    hide(btnSubmitAtt);
-    show(btnSaveDraft);
+    // Footer: lock entirely if already confirmed, else allow correction + resend.
+    if (S.submission?.status !== 'confirmed') {
+      hide(btnSubmitAtt);
+      show(btnSaveDraft);
+    }
 
   } catch (err) {
     console.error('[NSAMS-T] submit error', err);
